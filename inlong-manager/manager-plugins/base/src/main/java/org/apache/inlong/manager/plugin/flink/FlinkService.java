@@ -17,13 +17,6 @@
 
 package org.apache.inlong.manager.plugin.flink;
 
-import org.apache.inlong.manager.common.exceptions.BusinessException;
-import org.apache.inlong.manager.plugin.flink.dto.FlinkConfig;
-import org.apache.inlong.manager.plugin.flink.dto.FlinkInfo;
-import org.apache.inlong.manager.plugin.flink.dto.StopWithSavepointRequest;
-import org.apache.inlong.manager.plugin.flink.enums.Constants;
-import org.apache.inlong.manager.plugin.util.FlinkUtils;
-
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.JobID;
@@ -38,15 +31,17 @@ import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.rest.messages.job.JobDetailsInfo;
+import org.apache.inlong.manager.common.exceptions.BusinessException;
+import org.apache.inlong.manager.plugin.flink.dto.FlinkConfig;
+import org.apache.inlong.manager.plugin.flink.dto.FlinkInfo;
+import org.apache.inlong.manager.plugin.flink.dto.StopWithSavepointRequest;
+import org.apache.inlong.manager.plugin.flink.enums.Constants;
+import org.apache.inlong.manager.plugin.util.FlinkUtils;
 
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -260,5 +255,41 @@ public class FlinkService {
         list.add("60000");
         return list.toArray(new String[0]);
     }
+
+
+
+
+    public String startFlinkJobWithDynamicParallelism(FlinkInfo flinkInfo, SavepointRestoreSettings settings) throws Exception {
+        String localJarPath = flinkInfo.getLocalJarPath();
+        final File jarFile = new File(localJarPath);
+        final String[] programArgs = genProgramArgs(flinkInfo, flinkConfig);
+
+        List<URL> connectorJars = flinkInfo.getConnectorJarPaths().stream().map(p -> {
+            try {
+                return new File(p).toURI().toURL();
+            } catch (MalformedURLException e) {
+                return null;
+            }
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+
+        Configuration configuration = getFlinkConfiguration(flinkInfo.getEndpoint());
+
+        PackagedProgram program = PackagedProgram.newBuilder()
+                .setConfiguration(configuration)
+                .setEntryPointClassName(Constants.ENTRYPOINT_CLASS)
+                .setJarFile(jarFile)
+                .setUserClassPaths(connectorJars)
+                .setArguments(programArgs)
+                .setSavepointRestoreSettings(settings).build();
+        JobGraph jobGraph = PackagedProgramUtils.createJobGraph(program, configuration, parallelism, false);
+        jobGraph.addJars(connectorJars);
+
+        RestClusterClient<StandaloneClusterId> client = getFlinkClientService(configuration).getFlinkClient();
+        CompletableFuture<JobID> result = client.submitJob(jobGraph);
+        return result.get().toString();
+    }
+
+
+
 
 }
