@@ -15,28 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.inlong.sort.standalone.config.loader;
+package org.apache.inlong.sort.standalone.config.pojo;
 
-import org.apache.flume.conf.Configurable;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
-/**
- * Interface of ManagerUrlLoader.
- */
-public interface ManagerUrlLoader extends Configurable {
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
+@SuperBuilder
+public abstract class IdConfig {
 
-    /**
-     * Acquire SortSourceConfigUrl
-     *
-     * @return SortSourceConfigUrl
-     */
-    String acquireSortSourceConfigUrl();
-
-    /**
-     * Acquire SortClusterConfigUrl
-     *
-     * @return SortClusterConfigUrl
-     */
-    String acquireSortClusterConfigUrl();
-
-    String acquireSortConfigUrl();
+    protected String inlongGroupId;
+    protected String inlongStreamId;
 }
