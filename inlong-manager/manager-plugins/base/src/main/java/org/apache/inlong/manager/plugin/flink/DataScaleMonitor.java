@@ -24,7 +24,7 @@ import static java.lang.Math.ceil;
 @Slf4j
 public class DataScaleMonitor {
 
-    private AuditDataFetcher auditDataFetcher;
+    private AuditDataScaleFetcher auditDataScaleFetcher;
 
     private static final double MAXIMUM_MESSAGE_PER_SECOND_PER_CORE = 1000.0;
 
@@ -33,7 +33,7 @@ public class DataScaleMonitor {
     private static final long DEFAULT_DATA_VOLUME = 1000;
 
     public DataScaleMonitor() {
-        this.auditDataFetcher = new AuditDataFetcher();
+        this.auditDataScaleFetcher = new AuditDataScaleFetcher();
     }
 
     /**
@@ -44,7 +44,7 @@ public class DataScaleMonitor {
     public long retrieveDataVolume(AuditDataScaleRequest2 request) {
 
         try {
-            long dataVolume = auditDataFetcher.getDataScaleOnMinutesScale(request);
+            long dataVolume = auditDataScaleFetcher.getDataScaleOnMinutesScale(request);
             log.info("retrieved data volume: {}", dataVolume);
             return dataVolume;
         } catch (Exception e) {
