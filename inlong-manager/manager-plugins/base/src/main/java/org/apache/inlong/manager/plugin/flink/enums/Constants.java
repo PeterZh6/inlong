@@ -19,7 +19,7 @@ package org.apache.inlong.manager.plugin.flink.enums;
 
 import org.apache.inlong.manager.pojo.workflow.form.process.GroupResourceProcessForm;
 import org.apache.inlong.manager.pojo.workflow.form.process.ProcessForm;
-
+import org.apache.inlong.audit.entity.FlowType;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -102,15 +102,17 @@ public class Constants {
 
     public static final String DEFAULT_API_MINUTES_PATH = "/audit/query/minutes";
 
-    public static final int AUDIT_SUFFIX_LENGTH = 16;
+//    public static final int AUDIT_SUFFIX_LENGTH = 16;
+//
+//    public static final boolean DEFAULT_SUCCESS = true;
+//
+//    public static final boolean DEFAULT_IS_REAL_TIME = true;
+//
+//    public static final boolean DEFAULT_DISCARD = false;
+//
+//    public static final boolean DEFAULT_RETRY = false;
 
-    public static final boolean DEFAULT_SUCCESS = false;
-
-    public static final boolean DEFAULT_IS_REAL_TIME = true;
-
-    public static final boolean DEFAULT_DISCARD = false;
-
-    public static final boolean DEFAULT_RETRY = false;
+    public static final FlowType DEFAULT_FLOWTYPE = FlowType.INPUT;
 
     /**
      * Generate the Job name through {@link ProcessForm}: <br/>

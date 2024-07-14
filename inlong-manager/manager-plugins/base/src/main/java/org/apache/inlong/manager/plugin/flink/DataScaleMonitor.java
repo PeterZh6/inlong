@@ -26,6 +26,7 @@ public class DataScaleMonitor {
 
     private AuditDataScaleFetcher auditDataScaleFetcher;
 
+    //TODO: leave this to be configurable
     private static final double MAXIMUM_MESSAGE_PER_SECOND_PER_CORE = 1000.0;
 
     private static final int DEFAULT_PARALLELISM = 1;

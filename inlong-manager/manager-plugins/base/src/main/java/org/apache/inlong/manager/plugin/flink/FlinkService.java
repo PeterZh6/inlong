@@ -23,6 +23,7 @@ import org.apache.inlong.manager.plugin.flink.dto.FlinkInfo;
 import org.apache.inlong.manager.plugin.flink.dto.StopWithSavepointRequest;
 import org.apache.inlong.manager.plugin.flink.enums.Constants;
 import org.apache.inlong.manager.plugin.util.FlinkUtils;
+import org.apache.inlong.manager.pojo.stream.InlongStreamInfo;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -38,7 +39,6 @@ import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.rest.messages.job.JobDetailsInfo;
-import org.apache.inlong.manager.pojo.stream.InlongStreamInfo;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -59,6 +59,8 @@ public class FlinkService {
     private static final Pattern IP_PORT_PATTERN = Pattern.compile("(\\d+\\.\\d+\\.\\d+\\.\\d+):(\\d+)");
 
     private final FlinkConfig flinkConfig;
+
+    private int parallelism;
     private final String savepointDirectory;
     // map endpoint to Configuration
     private final Map<String, Configuration> configurations = new HashMap<>();
@@ -210,14 +212,22 @@ public class FlinkService {
         Configuration configuration = getFlinkConfiguration(flinkInfo.getEndpoint());
 
         List<InlongStreamInfo> inlongStreamInfoList = flinkInfo.getInlongStreamInfoList();
+
         AuditDataScaleRequest2 request = new AuditDataScaleRequest2();
+        request.setAuditType(flinkInfo.getSinkType());
         request.setInlongGroupId(inlongStreamInfoList.get(0).getInlongGroupId());
         request.setInlongStreamId(inlongStreamInfoList.get(0).getInlongStreamId());
         request.setEndTime(LocalDateTime.now().toString());
         request.setStartTime(LocalDateTime.now().minusHours(1).toString());
+
         DataScaleMonitor dataScaleMonitor = new DataScaleMonitor();
         int recommendedParallelism = dataScaleMonitor.getRecommendedParallelism(request);
-        log.info("parallelism: {}", recommendedParallelism);
+        int parallelism = flinkConfig.getParallelism();
+        if(recommendedParallelism != parallelism) {
+            log.info("switched to recommended parallelism: {}", recommendedParallelism);
+            parallelism = recommendedParallelism;
+        }
+        log.info("current parallelism: {}", parallelism);
 
         PackagedProgram program = PackagedProgram.newBuilder()
                 .setConfiguration(configuration)
@@ -266,7 +276,5 @@ public class FlinkService {
         list.add("60000");
         return list.toArray(new String[0]);
     }
-
-
 
 }
