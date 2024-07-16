@@ -58,13 +58,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.apache.inlong.manager.plugin.flink.enums.Constants.ADDRESS;
-import static org.apache.inlong.manager.plugin.flink.enums.Constants.DRAIN;
-import static org.apache.inlong.manager.plugin.flink.enums.Constants.FLINK_VERSION;
-import static org.apache.inlong.manager.plugin.flink.enums.Constants.JOB_MANAGER_PORT;
-import static org.apache.inlong.manager.plugin.flink.enums.Constants.PARALLELISM;
-import static org.apache.inlong.manager.plugin.flink.enums.Constants.PORT;
-import static org.apache.inlong.manager.plugin.flink.enums.Constants.SAVEPOINT_DIRECTORY;
+import static org.apache.inlong.manager.plugin.flink.enums.Constants.*;
 
 /**
  * Util of flink.
@@ -215,6 +209,7 @@ public class FlinkUtils {
         flinkConfig.setJobManagerPort(Integer.valueOf(properties.getProperty(JOB_MANAGER_PORT)));
         flinkConfig.setDrain(Boolean.parseBoolean(properties.getProperty(DRAIN)));
         flinkConfig.setVersion(properties.getProperty(FLINK_VERSION));
+        flinkConfig.setMaxpercore(Integer.valueOf(properties.getProperty(FLINK_MAXPERCORE)));
         return flinkConfig;
     }
 

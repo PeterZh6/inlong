@@ -18,6 +18,7 @@
 package org.apache.inlong.manager.plugin.flink;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.inlong.manager.pojo.audit.AuditDataScaleRequest;
 
 import static java.lang.Math.ceil;
 
@@ -26,8 +27,7 @@ public class DataScaleMonitor {
 
     private AuditDataScaleFetcher auditDataScaleFetcher;
 
-    //TODO: leave this to be configurable
-    private static final double MAXIMUM_MESSAGE_PER_SECOND_PER_CORE = 1000.0;
+    private static double MAXIMUM_MESSAGE_PER_SECOND_PER_CORE = 1000.0;
 
     private static final int DEFAULT_PARALLELISM = 1;
 
@@ -39,10 +39,11 @@ public class DataScaleMonitor {
 
     /**
      * Retrieve data volume
+     *
      * @param request
      * @return data volume, return default data volume if failed
      */
-    public long retrieveDataVolume(AuditDataScaleRequest2 request) {
+    public long retrieveDataVolume(AuditDataScaleRequest request) {
 
         try {
             long dataVolume = auditDataScaleFetcher.getDataScaleOnMinutesScale(request);
@@ -60,7 +61,7 @@ public class DataScaleMonitor {
      *
      * @return recommended parallelism
      */
-    private int calculateRecommendedParallelism(AuditDataScaleRequest2 request) {
+    private int calculateRecommendedParallelism(AuditDataScaleRequest request) {
 
         long dataVolume = retrieveDataVolume(request);
         int newParallelism = (int) ceil(dataVolume / MAXIMUM_MESSAGE_PER_SECOND_PER_CORE);
@@ -72,7 +73,15 @@ public class DataScaleMonitor {
      *
      * @return recommended parallelism
      */
-    public int getRecommendedParallelism(AuditDataScaleRequest2 request) {
+    public int getRecommendedParallelism(AuditDataScaleRequest request) {
         return calculateRecommendedParallelism(request);
+    }
+
+    public static void setMaximumMessagePerSecondPerCore(int maximumMessagePerSecondPerCore) {
+        if (maximumMessagePerSecondPerCore <= 0) {
+            log.error("maximumMessagePerSecondPerCore must be positive, using default maximumMessagePerSecondPerCore");
+        } else {
+            DataScaleMonitor.MAXIMUM_MESSAGE_PER_SECOND_PER_CORE = maximumMessagePerSecondPerCore;
+        }
     }
 }

@@ -17,9 +17,13 @@
 
 package org.apache.inlong.manager.pojo.audit;
 
+import lombok.Data;
+
 /**
  * Audit Data Scale Request
+ * Request for querying data scale from audit
  */
+@Data
 public class AuditDataScaleRequest {
 
     private String startTime;
@@ -28,71 +32,6 @@ public class AuditDataScaleRequest {
     private String inlongStreamId;
     private String auditId;
     private String auditCycle;
+    private String auditType;
 
-    /**
-     * Audit Data Scale Request
-     * @param startTime
-     * @param endTime
-     * @param inlongGroupId
-     * @param inlongStreamId
-     * @param auditId
-     * @param auditCycle
-     */
-    public AuditDataScaleRequest(String startTime, String endTime, String inlongGroupId, String inlongStreamId,
-            String auditId, String auditCycle) {
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.inlongGroupId = inlongGroupId;
-        this.inlongStreamId = inlongStreamId;
-        this.auditId = auditId;
-        this.auditCycle = auditCycle;
-    }
-
-    public String getStartTime() {
-        return startTime;
-    }
-
-    public void setStartTime(String startTime) {
-        this.startTime = startTime;
-    }
-
-    public String getEndTime() {
-        return endTime;
-    }
-
-    public void setEndTime(String endTime) {
-        this.endTime = endTime;
-    }
-
-    public String getInlongGroupId() {
-        return inlongGroupId;
-    }
-
-    public void setInlongGroupId(String inlongGroupId) {
-        this.inlongGroupId = inlongGroupId;
-    }
-
-    public String getInlongStreamId() {
-        return inlongStreamId;
-    }
-
-    public void setInlongStreamId(String inlongStreamId) {
-        this.inlongStreamId = inlongStreamId;
-    }
-
-    public String getAuditId() {
-        return auditId;
-    }
-
-    public void setAuditId(String auditId) {
-        this.auditId = auditId;
-    }
-
-    public String getAuditCycle() {
-        return auditCycle;
-    }
-
-    public void setAuditCycle(String auditCycle) {
-        this.auditCycle = auditCycle;
-    }
 }

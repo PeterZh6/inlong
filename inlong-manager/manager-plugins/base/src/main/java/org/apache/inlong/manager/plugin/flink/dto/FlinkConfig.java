@@ -40,4 +40,5 @@ public class FlinkConfig {
     // flink version
     private String version;
 
+    private Integer maxpercore;
 }

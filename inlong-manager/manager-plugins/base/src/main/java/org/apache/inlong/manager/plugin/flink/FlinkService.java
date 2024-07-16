@@ -17,14 +17,6 @@
 
 package org.apache.inlong.manager.plugin.flink;
 
-import org.apache.inlong.manager.common.exceptions.BusinessException;
-import org.apache.inlong.manager.plugin.flink.dto.FlinkConfig;
-import org.apache.inlong.manager.plugin.flink.dto.FlinkInfo;
-import org.apache.inlong.manager.plugin.flink.dto.StopWithSavepointRequest;
-import org.apache.inlong.manager.plugin.flink.enums.Constants;
-import org.apache.inlong.manager.plugin.util.FlinkUtils;
-import org.apache.inlong.manager.pojo.stream.InlongStreamInfo;
-
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.JobID;
@@ -39,6 +31,14 @@ import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.rest.messages.job.JobDetailsInfo;
+import org.apache.inlong.manager.common.exceptions.BusinessException;
+import org.apache.inlong.manager.plugin.flink.dto.FlinkConfig;
+import org.apache.inlong.manager.plugin.flink.dto.FlinkInfo;
+import org.apache.inlong.manager.plugin.flink.dto.StopWithSavepointRequest;
+import org.apache.inlong.manager.plugin.flink.enums.Constants;
+import org.apache.inlong.manager.plugin.util.FlinkUtils;
+import org.apache.inlong.manager.pojo.audit.AuditDataScaleRequest;
+import org.apache.inlong.manager.pojo.stream.InlongStreamInfo;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -213,13 +213,15 @@ public class FlinkService {
 
         List<InlongStreamInfo> inlongStreamInfoList = flinkInfo.getInlongStreamInfoList();
 
-        AuditDataScaleRequest2 request = new AuditDataScaleRequest2();
+        AuditDataScaleRequest request = new AuditDataScaleRequest();
         request.setAuditType(flinkInfo.getSinkType());
         request.setInlongGroupId(inlongStreamInfoList.get(0).getInlongGroupId());
         request.setInlongStreamId(inlongStreamInfoList.get(0).getInlongStreamId());
         request.setEndTime(LocalDateTime.now().toString());
         request.setStartTime(LocalDateTime.now().minusHours(1).toString());
-
+        if(flinkConfig.getMaxpercore() != null) {
+            DataScaleMonitor.setMaximumMessagePerSecondPerCore(flinkConfig.getMaxpercore());
+        }
         DataScaleMonitor dataScaleMonitor = new DataScaleMonitor();
         int recommendedParallelism = dataScaleMonitor.getRecommendedParallelism(request);
         int parallelism = flinkConfig.getParallelism();

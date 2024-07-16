@@ -28,9 +28,11 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.apache.inlong.audit.AuditIdEnum;
 import org.apache.inlong.manager.plugin.flink.enums.Constants;
+import org.apache.inlong.manager.pojo.audit.AuditDataScaleRequest;
 import org.apache.inlong.manager.pojo.audit.AuditInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -48,13 +50,13 @@ import static org.apache.inlong.manager.plugin.flink.enums.Constants.DEFAULT_FLO
  */
 public class AuditDataScaleFetcher {
 
+    @Value("${audit.query.url:http://127.0.0.1:10080}")
+    private String auditQueryUrl;
+
     private static final Logger LOG = LoggerFactory.getLogger(AuditDataScaleFetcher.class);
 
     public AuditDataScaleFetcher() {
     }
-
-    // TODO read audit api url from config
-    private static final String TEST_AUDIT_API_URL = "http://172.28.128.1:10080";
 
     /**
      * Get data scale on minutes scale
@@ -63,7 +65,7 @@ public class AuditDataScaleFetcher {
      * @return
      * @throws Exception
      */
-    public static long getDataScaleOnMinutesScale(AuditDataScaleRequest2 request) throws Exception {
+    public long getDataScaleOnMinutesScale(AuditDataScaleRequest request) {
         int auditId = AuditIdEnum.getAuditId(request.getAuditType(), DEFAULT_FLOWTYPE).getValue();
         StringJoiner urlParameters =
                 new StringJoiner("&").add(Constants.PARAMS_START_TIME + "=" + request.getStartTime())
@@ -73,13 +75,12 @@ public class AuditDataScaleFetcher {
                         .add(Constants.PARAMS_AUDIT_ID + "=" + auditId)
                         .add(Constants.PARAMS_AUDIT_CYCLE + "=" + request.getAuditCycle());
 
-        String url = TEST_AUDIT_API_URL + DEFAULT_API_MINUTES_PATH + "?" + urlParameters;
+        String url = auditQueryUrl + DEFAULT_API_MINUTES_PATH + "?" + urlParameters;
         long count = getCountFromAuditInfo(url);
         long finalCount = count == -1 ? 0 : count;
 
         return finalCount;
     }
-
 
 
     /**
@@ -156,74 +157,6 @@ public class AuditDataScaleFetcher {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return formatter.parse(logTs);
     }
-
-    public static void main(String[] args) throws Exception {
-        AuditDataScaleFetcher auditDataScaleFetcher = new AuditDataScaleFetcher();
-        String auditTypeStr = "CLICKHOUSE";
-        String startTime = "2024-07-01T00:00:00";
-        String endTime = "2024-07-07T00:10:00";
-        String inlongGroupId = "test_pulsar_group";
-        String inlongStreamId = "test_pulsar_stream";
-        String auditCycle = "1";
-        AuditDataScaleRequest2 request = new AuditDataScaleRequest2();
-        request.setStartTime(startTime);
-        request.setEndTime(endTime);
-        request.setInlongGroupId(inlongGroupId);
-        request.setInlongStreamId(inlongStreamId);
-        request.setAuditCycle(auditCycle);
-        request.setAuditType(auditTypeStr);
-
-
-        try {
-            long dataVolume = getDataScaleOnMinutesScale(request);
-            LOG.info("Data Volume: {}", dataVolume);
-        } catch (Exception e) {
-            LOG.error("Error calculating parallelism", e);
-            e.printStackTrace();
-        }
-    }
-
 }
 
 
-
-//    /**
-//     * get AuditId in order to query Audit API
-//     * @param
-//     * @return
-//     */
-//    private String buildSuccessfulAuditId() {
-//        String auditType = "DATA_PROXY";
-//        FlowType flowType = FlowType.OUTPUT;
-//        String auditPreFix = buildSuccessAndFailureFlag(DEFAULT_SUCCESS) + buildRealtimeFlag(DEFAULT_IS_REAL_TIME)
-//                + buildDiscardFlag(DEFAULT_DISCARD) + buildRetryFlag(DEFAULT_RETRY);
-////        AuditIdEnum baseAuditId = AuditIdEnum.getAuditId(auditType, flowType);
-//        int baseAuditId = 6;
-////        int auditId = Integer.parseInt(auditPreFix + buildAuditIdSuffix(baseAuditId.getValue()), 2);
-//        int auditId = Integer.parseInt(auditPreFix + buildAuditIdSuffix(baseAuditId), 2);
-//        return String.valueOf(auditId);
-//    }
-
-//    public static String buildSuccessAndFailureFlag(boolean success) {
-//        return success ? "0" : "1";
-//    }
-//
-//    public static String buildRealtimeFlag(boolean isRealtime) {
-//        return isRealtime ? "0" : "1";
-//    }
-//
-//    public static String buildDiscardFlag(boolean discard) {
-//        return discard ? "1" : "0";
-//    }
-//
-//    public static String buildRetryFlag(boolean retry) {
-//        return retry ? "1" : "0";
-//    }
-//
-//    public static String buildAuditIdSuffix(int auditId) {
-//        StringBuilder auditIdBinaryString = new StringBuilder(Integer.toBinaryString(auditId));
-//        for (int i = auditIdBinaryString.length(); i < AUDIT_SUFFIX_LENGTH; i++) {
-//            auditIdBinaryString.insert(0, "0");
-//        }
-//        return auditIdBinaryString.toString();
-//    }
