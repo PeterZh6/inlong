@@ -44,7 +44,11 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -277,6 +281,16 @@ public class FlinkService {
         list.add("-checkpoint.interval");
         list.add("60000");
         return list.toArray(new String[0]);
+    }
+
+    public static void main(String[] args) {
+        try {
+            FlinkService flinkService = new FlinkService();
+            FlinkConfig flinkConfig = flinkService.getFlinkConfig();
+            System.out.println(flinkConfig);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
