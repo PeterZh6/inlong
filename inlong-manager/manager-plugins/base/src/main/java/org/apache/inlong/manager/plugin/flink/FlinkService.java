@@ -283,14 +283,5 @@ public class FlinkService {
         return list.toArray(new String[0]);
     }
 
-    public static void main(String[] args) {
-        try {
-            FlinkService flinkService = new FlinkService();
-            FlinkConfig flinkConfig = flinkService.getFlinkConfig();
-            System.out.println(flinkConfig);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
 }
