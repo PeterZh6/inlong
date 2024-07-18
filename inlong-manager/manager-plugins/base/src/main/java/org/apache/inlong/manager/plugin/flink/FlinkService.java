@@ -64,7 +64,6 @@ public class FlinkService {
 
     private final FlinkConfig flinkConfig;
 
-    private int parallelism;
     private final String savepointDirectory;
     // map endpoint to Configuration
     private final Map<String, Configuration> configurations = new HashMap<>();
@@ -216,13 +215,34 @@ public class FlinkService {
         Configuration configuration = getFlinkConfiguration(flinkInfo.getEndpoint());
 
         List<InlongStreamInfo> inlongStreamInfoList = flinkInfo.getInlongStreamInfoList();
-
+        log.info("flinkinfo {}", flinkInfo);
         AuditDataScaleRequest request = new AuditDataScaleRequest();
-        request.setAuditType(flinkInfo.getSinkType());
-        request.setInlongGroupId(inlongStreamInfoList.get(0).getInlongGroupId());
-        request.setInlongStreamId(inlongStreamInfoList.get(0).getInlongStreamId());
-        request.setEndTime(LocalDateTime.now().toString());
-        request.setStartTime(LocalDateTime.now().minusHours(1).toString());
+        try {
+            request.setAuditType(flinkInfo.getSinkType());
+        } catch(Exception e) {
+            log.error("null pointer when reading attributes from flinkInfo: {}", flinkInfo, e);
+        }
+        try {
+            request.setInlongGroupId(inlongStreamInfoList.get(0).getInlongGroupId());
+    } catch(Exception e) {
+        log.error("null pointer when reading attributes from flinkInfo: {}", flinkInfo, e);
+    }
+        try {
+            request.setInlongStreamId(inlongStreamInfoList.get(0).getInlongStreamId());
+        } catch(Exception e) {
+        log.error("null pointer when reading attributes from flinkInfo: {}", flinkInfo, e);
+        }
+        try {
+            request.setEndTime(LocalDateTime.now().toString());
+        } catch(Exception e) {
+        log.error("null pointer when reading attributes from flinkInfo: {}", flinkInfo, e);
+        }
+        try {
+            request.setStartTime(LocalDateTime.now().minusHours(1).toString());
+        } catch(Exception e) {
+        log.error("null pointer when reading attributes from flinkInfo: {}", flinkInfo, e);
+        }
+
         if(flinkConfig.getMaxpercore() != null) {
             DataScaleMonitor.setMaximumMessagePerSecondPerCore(flinkConfig.getMaxpercore());
         }
@@ -232,6 +252,8 @@ public class FlinkService {
         if(recommendedParallelism != parallelism) {
             log.info("switched to recommended parallelism: {}", recommendedParallelism);
             parallelism = recommendedParallelism;
+        } else {
+                log.info("didn't use dynamic parallellism, using parallelism from config: {}", parallelism);
         }
         log.info("current parallelism: {}", parallelism);
 

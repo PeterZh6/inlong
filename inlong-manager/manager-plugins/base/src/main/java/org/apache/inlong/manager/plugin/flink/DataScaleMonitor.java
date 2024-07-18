@@ -65,6 +65,7 @@ public class DataScaleMonitor {
 
         long dataVolume = retrieveDataVolume(request);
         int newParallelism = (int) ceil(dataVolume / MAXIMUM_MESSAGE_PER_SECOND_PER_CORE);
+        log.info("calculated parallelism: {}", newParallelism);
         return Math.max(newParallelism, DEFAULT_PARALLELISM); // make sure parallelism is at least 1
     }
 

@@ -20,6 +20,7 @@ package org.apache.inlong.manager.plugin.flink;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -48,6 +49,7 @@ import static org.apache.inlong.manager.plugin.flink.enums.Constants.DEFAULT_FLO
  * Audit Data Fetcher
  * get data scale from audit api
  */
+@Slf4j
 public class AuditDataScaleFetcher {
 
     @Value("${audit.query.url:http://127.0.0.1:10080}")
@@ -66,7 +68,15 @@ public class AuditDataScaleFetcher {
      * @throws Exception
      */
     public long getDataScaleOnMinutesScale(AuditDataScaleRequest request) {
-        int auditId = AuditIdEnum.getAuditId(request.getAuditType(), DEFAULT_FLOWTYPE).getValue();
+        int auditId;
+        try {
+            log.info("AuditType: {}", request.getAuditType());
+            auditId = AuditIdEnum.getAuditId(request.getAuditType(), DEFAULT_FLOWTYPE).getValue();
+            log.info("AuditId: {}", auditId);
+        } catch (Exception e) {
+            LOG.error("Error getting audit id", e);
+            return -1;
+        }
         StringJoiner urlParameters =
                 new StringJoiner("&").add(Constants.PARAMS_START_TIME + "=" + request.getStartTime())
                         .add(Constants.PARAMS_END_TIME + "=" + request.getEndTime())
@@ -76,7 +86,9 @@ public class AuditDataScaleFetcher {
                         .add(Constants.PARAMS_AUDIT_CYCLE + "=" + request.getAuditCycle());
 
         String url = auditQueryUrl + DEFAULT_API_MINUTES_PATH + "?" + urlParameters;
+        log.info("Request URL: {}", url);
         long count = getCountFromAuditInfo(url);
+        log.info("retrieved Count froma audit: {}", count);
         long finalCount = count == -1 ? 0 : count;
 
         return finalCount;
@@ -140,9 +152,11 @@ public class AuditDataScaleFetcher {
                     closest = auditData;
                 }
             } catch (Exception e) {
+                log.error("unable to get logTs as date", e);
                 e.printStackTrace();
             }
         }
+        log.info("Closest AuditEntity: {}", closest);
         return closest;
     }
 
