@@ -37,18 +37,11 @@ import org.apache.inlong.manager.plugin.flink.dto.FlinkInfo;
 import org.apache.inlong.manager.plugin.flink.dto.StopWithSavepointRequest;
 import org.apache.inlong.manager.plugin.flink.enums.Constants;
 import org.apache.inlong.manager.plugin.util.FlinkUtils;
-import org.apache.inlong.manager.pojo.audit.AuditDataScaleRequest;
-import org.apache.inlong.manager.pojo.stream.InlongStreamInfo;
 
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -214,24 +207,18 @@ public class FlinkService {
         }).filter(Objects::nonNull).collect(Collectors.toList());
 
         Configuration configuration = getFlinkConfiguration(flinkInfo.getEndpoint());
-
-        List<InlongStreamInfo> inlongStreamInfoList = flinkInfo.getInlongStreamInfoList();
-
-        AuditDataScaleRequest request = new AuditDataScaleRequest();
-        request.setAuditType(flinkInfo.getSinkType());
-        request.setInlongGroupId(inlongStreamInfoList.get(0).getInlongGroupId());
-        request.setInlongStreamId(inlongStreamInfoList.get(0).getInlongStreamId());
-        request.setEndTime(LocalDateTime.now().toString());
-        request.setStartTime(LocalDateTime.now().minusHours(1).toString());
-        if(flinkConfig.getMaxpercore() != null) {
-            DataScaleMonitor.setMaximumMessagePerSecondPerCore(flinkConfig.getMaxpercore());
-        }
-        DataScaleMonitor dataScaleMonitor = new DataScaleMonitor();
-        int recommendedParallelism = dataScaleMonitor.getRecommendedParallelism(request);
-        int parallelism = flinkConfig.getParallelism();
-        if(recommendedParallelism != parallelism) {
-            log.info("switched to recommended parallelism: {}", recommendedParallelism);
-            parallelism = recommendedParallelism;
+        log.info("flink configuration: {}", flinkConfig);
+        log.info("flink info: {}", flinkInfo);
+        parallelism = flinkConfig.getParallelism();
+        if (flinkConfig.getDynamicParallelism() != null && flinkConfig.getDynamicParallelism() == true) {
+            FlinkParallelismOptimizer flinkParallelismOptimizer = new FlinkParallelismOptimizer();
+            flinkParallelismOptimizer.setMaximumMessagePerSecondPerCore(flinkConfig.getMaxpercore());
+            // get stream info list for auditing
+            int recommendedParallelism = flinkParallelismOptimizer.calculateRecommendedParallelism(flinkInfo.getInlongStreamInfoList());
+            if (recommendedParallelism != parallelism) {
+                log.info("switched to recommended parallelism: {}", recommendedParallelism);
+                parallelism = recommendedParallelism;
+            }
         }
         log.info("current parallelism: {}", parallelism);
 
@@ -242,7 +229,7 @@ public class FlinkService {
                 .setUserClassPaths(connectorJars)
                 .setArguments(programArgs)
                 .setSavepointRestoreSettings(settings).build();
-        JobGraph jobGraph = PackagedProgramUtils.createJobGraph(program, configuration, recommendedParallelism, false);
+        JobGraph jobGraph = PackagedProgramUtils.createJobGraph(program, configuration, parallelism, false);
         jobGraph.addJars(connectorJars);
 
         RestClusterClient<StandaloneClusterId> client = getFlinkClientService(configuration).getFlinkClient();

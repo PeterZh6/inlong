@@ -45,6 +45,8 @@ public class Constants {
 
     public static final String FLINK_MAXPERCORE = "flink.maxpercore";
 
+    public static final String FLINK_DYNAMIC_PARALLELISM = "flink.dynamicParallelism";
+
     // dataflow
     public static final String SOURCE_INFO = "source_info";
 
@@ -86,21 +88,7 @@ public class Constants {
 
     public static final String SEPARATOR = ":";
 
-    public static final String PARAMS_START_TIME = "startTime";
 
-    public static final String PARAMS_END_TIME = "endTime";
-
-    public static final String PARAMS_AUDIT_ID = "auditId";
-
-    public static final String PARAMS_AUDIT_CYCLE = "auditCycle";
-
-    public static final String PARAMS_INLONG_GROUP_ID = "inlongGroupId";
-
-    public static final String PARAMS_INLONG_STREAM_ID = "inlongStreamId";
-
-    public static final String DEFAULT_API_MINUTES_PATH = "/audit/query/minutes";
-
-    public static final FlowType DEFAULT_FLOWTYPE = FlowType.INPUT;
 
     /**
      * Generate the Job name through {@link ProcessForm}: <br/>

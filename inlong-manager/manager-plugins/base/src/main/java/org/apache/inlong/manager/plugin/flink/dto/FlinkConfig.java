@@ -41,4 +41,7 @@ public class FlinkConfig {
     private String version;
 
     private Integer maxpercore;
+
+    // whether to enable dynamic parallelism
+    private Boolean dynamicParallelism;
 }

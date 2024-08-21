@@ -210,6 +210,7 @@ public class FlinkUtils {
         flinkConfig.setDrain(Boolean.parseBoolean(properties.getProperty(DRAIN)));
         flinkConfig.setVersion(properties.getProperty(FLINK_VERSION));
         flinkConfig.setMaxpercore(Integer.valueOf(properties.getProperty(FLINK_MAXPERCORE)));
+        flinkConfig.setDynamicParallelism(Boolean.parseBoolean(properties.getProperty(FLINK_DYNAMIC_PARALLELISM)));
         return flinkConfig;
     }
 
