@@ -39,7 +39,6 @@ import org.apache.inlong.manager.plugin.flink.dto.StopWithSavepointRequest;
 import org.apache.inlong.manager.plugin.flink.enums.Constants;
 import org.apache.inlong.manager.plugin.util.ApplicationContextProvider;
 import org.apache.inlong.manager.plugin.util.FlinkUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -67,12 +66,15 @@ public class FlinkService {
     // map Configuration to FlinkClientService
     private final Map<Configuration, FlinkClientService> flinkClientServices = new HashMap<>();
 
+    private final FlinkParallelismOptimizer flinkParallelismOptimizer;
+
     /**
      * Constructor of FlinkService.
      */
     public FlinkService() throws Exception {
         flinkConfig = FlinkUtils.getFlinkConfigFromFile();
         savepointDirectory = flinkConfig.getSavepointDirectory();
+        flinkParallelismOptimizer = ApplicationContextProvider.getContext().getBean(FlinkParallelismOptimizer.class); // let spring inject the bean
     }
 
     private static class FlinkServiceHolder {
@@ -210,11 +212,9 @@ public class FlinkService {
         }).filter(Objects::nonNull).collect(Collectors.toList());
 
         Configuration configuration = getFlinkConfiguration(flinkInfo.getEndpoint());
-        log.info("flink configuration: {}", flinkConfig);
-        log.info("flink info: {}", flinkInfo);
         parallelism = flinkConfig.getParallelism();
         if (flinkConfig.getDynamicParallelism()) {
-            FlinkParallelismOptimizer flinkParallelismOptimizer = ApplicationContextProvider.getContext().getBean(FlinkParallelismOptimizer.class);
+
             flinkParallelismOptimizer.setMaximumMessagePerSecondPerCore(flinkConfig.getMaxpercore());
             // get stream info list for auditing
             int recommendedParallelism = flinkParallelismOptimizer.calculateRecommendedParallelism(flinkInfo.getInlongStreamInfoList());

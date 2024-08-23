@@ -35,7 +35,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -119,9 +119,9 @@ public class FlinkParallelismOptimizer {
      * @return The average data count per hour
      */
     private long getAverageDataVolumePerHour(InlongStreamInfo streamInfo) {
-        LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = endTime.minusHours(1);
-
+        // Since the audit module use local time, we need to use ZonedDateTime to get the current time
+        ZonedDateTime endTime = ZonedDateTime.now();
+        ZonedDateTime startTime = endTime.minusHours(1);
 
         int auditId = AuditIdEnum.getAuditId(DEFAULT_AUDIT_TYPE, DEFAULT_FLOWTYPE).getValue();
         StringJoiner urlParameters = new StringJoiner(AMPERSAND)
@@ -145,6 +145,7 @@ public class FlinkParallelismOptimizer {
      * @return The total count of the audit data
      */
     private long getCountFromAuditInfo(String url) {
+        log.debug("Requesting audit data from URL: {}", url);
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet httpGet = new HttpGet(url);
             try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
