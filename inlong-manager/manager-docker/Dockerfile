@@ -39,7 +39,7 @@ ENV FLINK_PARALLELISM=1
 ENV MANAGER_JVM_HEAP_OPTS="-XX:+UseContainerSupport -XX:InitialRAMPercentage=40.0 -XX:MaxRAMPercentage=80.0 -XX:-UseAdaptiveSizePolicy"
 WORKDIR /opt/inlong-manager
 # add manager tarball
-ARG VERSION=1.13.0
+ARG VERSION=1.14.0-SNAPSHOT
 ARG default_jdbc_connector_url=https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.28/mysql-connector-java-8.0.28.jar
 ADD target/manager-web-${VERSION}-bin.tar.gz /opt/inlong-manager
 # add mysql connector
