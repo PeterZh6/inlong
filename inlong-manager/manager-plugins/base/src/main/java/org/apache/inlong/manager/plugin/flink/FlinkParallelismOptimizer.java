@@ -36,6 +36,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -51,7 +52,7 @@ import static java.lang.Math.ceil;
 public class FlinkParallelismOptimizer {
 
     @Value("${audit.query.url:http://127.0.0.1:10080}")
-    private String auditQueryUrl;
+    public String auditQueryUrl;
 
     private static final long DEFAULT_DATA_VOLUME = 1000;
     private static final long DEFAULT_MAXIMUM_MESSAGE_PER_SECOND_PER_CORE = 1000;
@@ -73,6 +74,7 @@ public class FlinkParallelismOptimizer {
     private static final String QUESTION_MARK = "?";
     private static final double SECONDS_PER_HOUR = 3600.0;
     private static final String AUDIT_CYCLE_REALTIME = "1";
+    private static final String AUDIT_QUERY_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS"; //sample time format: 2024-08-23T22:47:38.866
 
 
     /**
@@ -122,11 +124,12 @@ public class FlinkParallelismOptimizer {
         // Since the audit module use local time, we need to use ZonedDateTime to get the current time
         ZonedDateTime endTime = ZonedDateTime.now();
         ZonedDateTime startTime = endTime.minusHours(1);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AUDIT_QUERY_DATE_TIME_FORMAT);
 
         int auditId = AuditIdEnum.getAuditId(DEFAULT_AUDIT_TYPE, DEFAULT_FLOWTYPE).getValue();
         StringJoiner urlParameters = new StringJoiner(AMPERSAND)
-                .add(PARAMS_START_TIME + EQUAL + startTime)
-                .add(PARAMS_END_TIME + EQUAL + endTime)
+                .add(PARAMS_START_TIME + EQUAL + startTime.format(formatter))
+                .add(PARAMS_END_TIME + EQUAL + endTime.format(formatter))
                 .add(PARAMS_INLONG_GROUP_ID + EQUAL + streamInfo.getInlongGroupId())
                 .add(PARAMS_INLONG_STREAM_ID + EQUAL + streamInfo.getInlongStreamId())
                 .add(PARAMS_AUDIT_ID + EQUAL + auditId)
@@ -182,10 +185,10 @@ public class FlinkParallelismOptimizer {
         long totalCount = 0L;
         for (AuditInfo auditData : auditDataArray) {
             if (auditData != null) {
-                log.debug("AuditEntity Count: {}, Size: {}", auditData.getCount(), auditData.getSize());
+                log.debug("AuditInfo Count: {}, Size: {}", auditData.getCount(), auditData.getSize());
                 totalCount += auditData.getCount();
             } else {
-                log.error("Null AuditEntity found in response data.");
+                log.error("Null AuditInfo found in response data.");
             }
         }
         return totalCount;
