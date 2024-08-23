@@ -31,9 +31,8 @@ import org.apache.inlong.audit.AuditIdEnum;
 import org.apache.inlong.audit.entity.FlowType;
 import org.apache.inlong.manager.pojo.audit.AuditInfo;
 import org.apache.inlong.manager.pojo.stream.InlongStreamInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -42,7 +41,13 @@ import java.util.StringJoiner;
 
 import static java.lang.Math.ceil;
 
+/**
+ *     This class is used to calculate the recommended parallelism based on the maximum message per second per core.
+ *     The data volume is calculated based on the average data count per hour.
+ *     The data count is retrieved from the inlong audit API.
+ */
 @Slf4j
+@Component
 public class FlinkParallelismOptimizer {
 
     @Value("${audit.query.url:http://127.0.0.1:10080}")
@@ -53,7 +58,6 @@ public class FlinkParallelismOptimizer {
     private static final int MAX_PARALLELISM = 2048;
     private long maximumMessagePerSecondPerCore;
     private static final int DEFAULT_PARALLELISM = 1;
-    private static final Logger LOG = LoggerFactory.getLogger(FlinkParallelismOptimizer.class);
     private static final long DEFAULT_ERROR_DATA_COUNT = 0L;
     private static final String PARAMS_START_TIME = "startTime";
     private static final String PARAMS_END_TIME = "endTime";
@@ -73,7 +77,6 @@ public class FlinkParallelismOptimizer {
     public FlinkParallelismOptimizer() {
         this.maximumMessagePerSecondPerCore = DEFAULT_MAXIMUM_MESSAGE_PER_SECOND_PER_CORE;
     }
-
 
 
     /**
@@ -125,7 +128,7 @@ public class FlinkParallelismOptimizer {
 
         int auditId = AuditIdEnum.getAuditId(DEFAULT_AUDIT_TYPE, DEFAULT_FLOWTYPE).getValue();
         StringJoiner urlParameters = new StringJoiner(AMPERSAND)
-                .add(PARAMS_START_TIME + EQUAL +startTime)
+                .add(PARAMS_START_TIME + EQUAL + startTime)
                 .add(PARAMS_END_TIME + EQUAL + endTime)
                 .add(PARAMS_INLONG_GROUP_ID + EQUAL + streamInfo.getInlongGroupId())
                 .add(PARAMS_INLONG_STREAM_ID + EQUAL + streamInfo.getInlongStreamId())
@@ -150,10 +153,10 @@ public class FlinkParallelismOptimizer {
             try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
                 return parseResponse(response);
             } catch (IOException e) {
-                LOG.error("Error executing HTTP request to audit API: {}", url, e);
+                log.error("Error executing HTTP request to audit API: {}", url, e);
             }
         } catch (IOException e) {
-            LOG.error("Error creating or closing HTTP client: {}", url, e);
+            log.error("Error creating or closing HTTP client: {}", url, e);
         }
         return DEFAULT_ERROR_DATA_COUNT;
     }
@@ -168,12 +171,12 @@ public class FlinkParallelismOptimizer {
     private long parseResponse(CloseableHttpResponse response) throws IOException {
         HttpEntity entity = response.getEntity();
         if (entity == null) {
-            LOG.warn("Empty response entity from audit API, returning default count.");
+            log.warn("Empty response entity from audit API, returning default count.");
             return DEFAULT_ERROR_DATA_COUNT;
         }
 
         String responseString = EntityUtils.toString(entity);
-        LOG.info("Response: {}", responseString);
+        log.info("Response: {}", responseString);
 
         JsonObject jsonObject = JsonParser.parseString(responseString).getAsJsonObject();
         AuditInfo[] auditDataArray = new Gson().fromJson(jsonObject.getAsJsonArray("data"), AuditInfo[].class);
@@ -181,10 +184,10 @@ public class FlinkParallelismOptimizer {
         long totalCount = 0L;
         for (AuditInfo auditData : auditDataArray) {
             if (auditData != null) {
-                LOG.debug("AuditEntity Count: {}, Size: {}", auditData.getCount(), auditData.getSize());
+                log.debug("AuditEntity Count: {}, Size: {}", auditData.getCount(), auditData.getSize());
                 totalCount += auditData.getCount();
             } else {
-                LOG.error("Null AuditEntity found in response data.");
+                log.error("Null AuditEntity found in response data.");
             }
         }
         return totalCount;
