@@ -25,6 +25,7 @@ import org.apache.inlong.sort.standalone.channel.ProfileEvent;
 import org.apache.inlong.sort.standalone.config.holder.CommonPropertiesHolder;
 import org.apache.inlong.sort.standalone.config.holder.SortClusterConfigHolder;
 import org.apache.inlong.sort.standalone.config.holder.v2.SortConfigHolder;
+import org.apache.inlong.sort.standalone.config.pojo.CacheClusterConfig;
 import org.apache.inlong.sort.standalone.config.pojo.InlongId;
 import org.apache.inlong.sort.standalone.metrics.SortConfigMetricReporter;
 import org.apache.inlong.sort.standalone.metrics.SortMetricItem;
@@ -50,6 +51,7 @@ public class PulsarFederationSinkContext extends SinkContext {
     public static final String KEY_EVENT_HANDLER = "eventHandler";
     private Map<String, PulsarIdConfig> idConfigMap = new ConcurrentHashMap<>();
     private PulsarNodeConfig pulsarNodeConfig;
+    private CacheClusterConfig cacheClusterConfig;
 
     public PulsarFederationSinkContext(String sinkName, Context context, Channel channel) {
         super(sinkName, context, channel);
@@ -69,12 +71,20 @@ public class PulsarFederationSinkContext extends SinkContext {
                 return;
             }
 
-            PulsarNodeConfig requestNodeConfig = (PulsarNodeConfig) newTaskConfig.getNodeConfig();
-            if (pulsarNodeConfig == null || requestNodeConfig.getVersion() > pulsarNodeConfig.getVersion()) {
-                this.pulsarNodeConfig = requestNodeConfig;
+            if (newTaskConfig != null) {
+                PulsarNodeConfig requestNodeConfig = (PulsarNodeConfig) newTaskConfig.getNodeConfig();
+                if (pulsarNodeConfig == null || requestNodeConfig.getVersion() > pulsarNodeConfig.getVersion()) {
+                    this.pulsarNodeConfig = requestNodeConfig;
+                }
             }
+
             this.taskConfig = newTaskConfig;
             this.sortTaskConfig = newSortTaskConfig;
+
+            CacheClusterConfig clusterConfig = new CacheClusterConfig();
+            clusterConfig.setClusterName(this.taskName);
+            clusterConfig.setParams(this.sortTaskConfig.getSinkParams());
+            this.cacheClusterConfig = clusterConfig;
 
             Map<String, PulsarIdConfig> fromTaskConfig = fromTaskConfig(taskConfig);
             Map<String, PulsarIdConfig> fromSortTaskConfig = fromSortTaskConfig(sortTaskConfig);
@@ -86,6 +96,9 @@ public class PulsarFederationSinkContext extends SinkContext {
     }
 
     public Map<String, PulsarIdConfig> fromTaskConfig(TaskConfig taskConfig) {
+        if (taskConfig == null) {
+            return new HashMap<>();
+        }
         return taskConfig.getClusterTagConfigs()
                 .stream()
                 .map(ClusterTagConfig::getDataFlowConfigs)
@@ -98,6 +111,9 @@ public class PulsarFederationSinkContext extends SinkContext {
     }
 
     public Map<String, PulsarIdConfig> fromSortTaskConfig(SortTaskConfig sortTaskConfig) {
+        if (sortTaskConfig == null) {
+            return new HashMap<>();
+        }
         Map<String, PulsarIdConfig> newIdConfigMap = new ConcurrentHashMap<>();
         List<Map<String, String>> idList = sortTaskConfig.getIdParams();
         for (Map<String, String> idParam : idList) {
@@ -129,6 +145,10 @@ public class PulsarFederationSinkContext extends SinkContext {
 
     public PulsarNodeConfig getNodeConfig() {
         return pulsarNodeConfig;
+    }
+
+    public CacheClusterConfig getCacheClusterConfig() {
+        return cacheClusterConfig;
     }
 
     public void addSendMetric(ProfileEvent currentRecord, String topic) {

@@ -19,6 +19,7 @@ package org.apache.inlong.sdk.transform.encode;
 
 import org.apache.inlong.sdk.transform.pojo.FieldInfo;
 import org.apache.inlong.sdk.transform.pojo.KvSinkInfo;
+import org.apache.inlong.sdk.transform.process.Context;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -28,10 +29,12 @@ import java.util.List;
 /**
  * KvSinkEncoder
  */
-public class KvSinkEncoder implements SinkEncoder {
+public class KvSinkEncoder implements SinkEncoder<String> {
 
     protected KvSinkInfo sinkInfo;
     protected Charset sinkCharset = Charset.defaultCharset();
+    private Character entryDelimiter = '&';
+    private Character kvDelimiter = '=';
     private List<FieldInfo> fields;
     private StringBuilder builder = new StringBuilder();
 
@@ -39,6 +42,12 @@ public class KvSinkEncoder implements SinkEncoder {
         this.sinkInfo = sinkInfo;
         if (!StringUtils.isBlank(sinkInfo.getCharset())) {
             this.sinkCharset = Charset.forName(sinkInfo.getCharset());
+        }
+        if (sinkInfo.getEntryDelimiter() != null) {
+            this.entryDelimiter = sinkInfo.getEntryDelimiter();
+        }
+        if (sinkInfo.getKvDelimiter() != null) {
+            this.kvDelimiter = sinkInfo.getKvDelimiter();
         }
         this.fields = sinkInfo.getFields();
     }
@@ -49,18 +58,18 @@ public class KvSinkEncoder implements SinkEncoder {
      * @return
      */
     @Override
-    public String encode(SinkData sinkData) {
+    public String encode(SinkData sinkData, Context context) {
         builder.delete(0, builder.length());
         if (fields == null || fields.size() == 0) {
             for (String fieldName : sinkData.keyList()) {
                 String fieldValue = sinkData.getField(fieldName);
-                builder.append(fieldName).append('=').append(fieldValue).append('&');
+                builder.append(fieldName).append(kvDelimiter).append(fieldValue).append(entryDelimiter);
             }
         } else {
             for (FieldInfo field : fields) {
                 String fieldName = field.getName();
                 String fieldValue = sinkData.getField(fieldName);
-                builder.append(fieldName).append('=').append(fieldValue).append('&');
+                builder.append(fieldName).append(kvDelimiter).append(fieldValue).append(entryDelimiter);
             }
         }
         return builder.substring(0, builder.length() - 1);

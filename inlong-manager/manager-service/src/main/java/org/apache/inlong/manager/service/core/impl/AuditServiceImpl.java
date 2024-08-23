@@ -116,7 +116,11 @@ public class AuditServiceImpl implements AuditService {
         try {
             auditIndicatorMap.clear();
             List<AuditInformation> auditInformationList = AuditOperator.getInstance().getAllAuditInformation();
+            List<AuditInformation> metricInformationList = AuditOperator.getInstance().getAllMetricInformation();
             auditInformationList.forEach(v -> {
+                auditItemMap.put(String.valueOf(v.getAuditId()), v.getNameInChinese());
+            });
+            metricInformationList.forEach(v -> {
                 auditItemMap.put(String.valueOf(v.getAuditId()), v.getNameInChinese());
             });
         } catch (Throwable t) {
@@ -188,7 +192,8 @@ public class AuditServiceImpl implements AuditService {
 
             if (CollectionUtils.isEmpty(request.getAuditIds())) {
                 // properly overwrite audit ids by role and stream config
-                if (InlongConstants.DATASYNC_MODE.equals(groupEntity.getInlongGroupMode())) {
+                if (InlongConstants.DATASYNC_REALTIME_MODE.equals(groupEntity.getInlongGroupMode())
+                        || InlongConstants.DATASYNC_OFFLINE_MODE.equals(groupEntity.getInlongGroupMode())) {
                     auditIdMap.put(getAuditId(sourceNodeType, IndicatorType.RECEIVED_SUCCESS), sourceNodeType);
                     request.setAuditIds(getAuditIds(groupId, streamId, sourceNodeType, sinkNodeType));
                 } else {
@@ -226,9 +231,11 @@ public class AuditServiceImpl implements AuditService {
     }
 
     @Override
-    public List<AuditInformation> getAuditBases() {
-        List<AuditInformation> auditInformations = AuditOperator.getInstance().getAllAuditInformation();
-        return auditInformations;
+    public List<AuditInformation> getAuditBases(Boolean isMetric) {
+        if (isMetric) {
+            return AuditOperator.getInstance().getAllMetricInformation();
+        }
+        return AuditOperator.getInstance().getAllAuditInformation();
     }
 
     private List<String> getAuditIds(String groupId, String streamId, String sourceNodeType, String sinkNodeType) {
@@ -242,7 +249,8 @@ public class AuditServiceImpl implements AuditService {
         } else {
             auditSet.add(getAuditId(sinkNodeType, IndicatorType.SEND_SUCCESS));
             InlongGroupEntity inlongGroup = inlongGroupMapper.selectByGroupId(groupId);
-            if (InlongConstants.DATASYNC_MODE.equals(inlongGroup.getInlongGroupMode())) {
+            if (InlongConstants.DATASYNC_REALTIME_MODE.equals(inlongGroup.getInlongGroupMode())
+                    || InlongConstants.DATASYNC_OFFLINE_MODE.equals(inlongGroup.getInlongGroupMode())) {
                 auditSet.add(getAuditId(sourceNodeType, IndicatorType.RECEIVED_SUCCESS));
             } else {
                 auditSet.add(getAuditId(sinkNodeType, IndicatorType.RECEIVED_SUCCESS));

@@ -60,7 +60,7 @@ export const getColumns = activedName => [
     dataIndex: 'processId',
     render: (text, record) => (
       <Link
-        to={`/process/${activedName}/${text}?taskId=${record.id}&inlongGroupMode=${record.showInList[0]?.inlongGroupMode}`}
+        to={`/process/${activedName}/${text}?taskId=${record.id}&inlongGroupMode=${record.showInList?.[0]?.inlongGroupMode}`}
       >
         {text}
       </Link>
@@ -106,7 +106,7 @@ export const getColumns = activedName => [
           />
         );
       }
-      return record.showInList[0]?.inlongGroupMode === 1 ? (
+      return record.showInList?.[0]?.inlongGroupMode === 1 ? (
         <StatusTag
           type={'success'}
           icon={<span />}
@@ -127,6 +127,17 @@ export const getColumns = activedName => [
     render: text => timestampFormat(text),
   },
   {
+    title: i18n.t('pages.Approvals.ProcessingTime'),
+    dataIndex: 'endTime',
+    render: (text, record) => {
+      if (record.status === 'PENDING') {
+        return '';
+      } else {
+        return timestampFormat(text);
+      }
+    },
+  },
+  {
     title: i18n.t('basic.Status'),
     dataIndex: 'status',
     render: text => genStatusTag(text),
@@ -136,9 +147,9 @@ export const getColumns = activedName => [
     dataIndex: 'action',
     render: (text, record) => (
       <Link
-        to={`/process/${activedName}/${record.processId}?taskId=${record.id}&inlongGroupMode=${record.showInList[0]?.inlongGroupMode}`}
+        to={`/process/${activedName}/${record.processId}?taskId=${record.id}&inlongGroupMode=${record.showInList?.[0]?.inlongGroupMode}`}
       >
-        {i18n.t('pages.Approvals.Approval')}
+        {record.status === 'PENDING' ? i18n.t('pages.Approvals.Approval') : i18n.t('basic.Detail')}
       </Link>
     ),
   },

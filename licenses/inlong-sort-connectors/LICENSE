@@ -851,9 +851,14 @@
        inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/table/PulsarTableOptionUtils.java
        inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/table/PulsarTableOptions.java
        inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/table/PulsarTableValidationUtils.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/table/source/PulsarReadableMetadata.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/table/source/PulsarRowDataConverter.java
        inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/table/source/PulsarTableDeserializationSchema.java
        inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/table/source/PulsarTableDeserializationSchemaFactory.java
        inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/table/source/PulsarTableSource.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/source/PulsarTableSource.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/source/PulsarSourceBuilder.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/pulsar/src/main/java/org/apache/inlong/sort/pulsar/source/reader/PulsarSourceReader.java
   Source  : org.apache.flink:flink-connector-pulsar:4.1.0-1.18 (Please note that the software have been modified.)
   License : https://github.com/apache/flink-connector-pulsar/blob/main/LICENSE
 
@@ -920,7 +925,7 @@ License : https://github.com/apache/hudi/blob/master/LICENSE
        inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/mysql-cdc/src/main/java/org/apache/inlong/sort/mysql/RowDataDebeziumDeserializeSchema.java
        inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/mysql-cdc/src/main/java/org/apache/inlong/sort/mysql/source/MySqlSourceBuilder.java
        inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/mysql-cdc/src/main/java/org/apache/inlong/sort/mysql/source/MySqlSource.java
-       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/mysql-cdc/src/main/java/org/apache/inlong/sort/mysql/table/MySqlReadableMetadata.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/mysql-cdc/src/main/java/org/apache/inlong/sort/mysql/source/reader/MySqlSourceReader.java
 Source  : com.ververica:flink-connector-mysql-cdc:2.3.0 (Please note that the software have been modified.)
 License : https://github.com/ververica/flink-cdc-connectors/blob/master/LICENSE
 
@@ -933,6 +938,66 @@ License : https://github.com/ververica/flink-cdc-connectors/blob/master/LICENSE
 Source  : org.apache.flink:flink-connector-jdbc-1.15.4.jar (Please note that the software have been modified.)
 License : https://github.com/apache/flink/blob/master/LICENSE
 
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/ElasticsearchConfiguration.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/ElasticsearchConnectorOptions.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/ElasticsearchValidationUtils.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/IndexGenerator.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/IndexGeneratorBase.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/IndexGeneratorFactory.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/KeyExtractor.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/RowElasticsearchSinkFunction.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/StaticIndexGenerator.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/util/IgnoringFailureHandler.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/util/NoOpFailureHandler.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/util/RetryRejectedExecutionFailureHandler.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/ActionRequestFailureHandler.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/BufferingNoOpRequestIndexer.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/ElasticsearchApiCallBridge.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/ElasticsearchSinkBase.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/ElasticsearchSinkFunction.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/RequestIndexer.java
+Source  : org.apache.flink:flink-connector-elasticsearch-base-3.0.1-1.17.jar (Please note that the software have been modified.)
+License : https://github.com/apache/flink/blob/master/LICENSE
+
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch6/src/main/java/org/apache/inlong/sort/elasticsearch6/table/Elasticsearch6Configuration.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch6/src/main/java/org/apache/inlong/sort/elasticsearch6/table/Elasticsearch6DynamicSink.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch6/src/main/java/org/apache/inlong/sort/elasticsearch6/table/Elasticsearch6DynamicSinkFactory.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch6/src/main/java/org/apache/inlong/sort/elasticsearch6/Elasticsearch6ApiCallBridge.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch6/src/main/java/org/apache/inlong/sort/elasticsearch6/Elasticsearch6BulkProcessorIndexer.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch6/src/main/java/org/apache/inlong/sort/elasticsearch6/ElasticsearchSink.java
+Source  : org.apache.flink:flink-connector-elasticsearch6-3.0.1-1.17.jar (Please note that the software have been modified.)
+License : https://github.com/apache/flink/blob/master/LICENSE
+
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch7/src/main/java/org/apache/inlong/sort/elasticsearch7/table/Elasticsearch7Configuration.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch7/src/main/java/org/apache/inlong/sort/elasticsearch7/table/Elasticsearch7DynamicSink.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch7/src/main/java/org/apache/inlong/sort/elasticsearch7/table/Elasticsearch7DynamicSinkFactory.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch7/src/main/java/org/apache/inlong/sort/elasticsearch7/Elasticsearch7ApiCallBridge.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch7/src/main/java/org/apache/inlong/sort/elasticsearch7/Elasticsearch7BulkProcessorIndexer.java
+       inlong-sort/sort-flink/sort-flink-v1.18/sort-connectors/elasticsearch7/src/main/java/org/apache/inlong/sort/elasticsearch7/ElasticsearchSink.java
+Source  : org.apache.flink:flink-connector-elasticsearch6-3.0.1-1.17.jar (Please note that the software have been modified.)
+License : https://github.com/apache/flink/blob/master/LICENSE
+
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/AbstractTimeIndexGenerator.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/ElasticsearchConfiguration.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/ElasticsearchConnectorOptions.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/ElasticsearchValidationUtils.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/IndexGenerator.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/IndexGeneratorBase.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/IndexGeneratorFactory.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/KeyExtractor.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/RequestFactory.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/RowElasticsearchSinkFunction.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/table/StaticIndexGenerator.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/util/IgnoringFailureHandler.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/util/NoOpFailureHandler.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/ActionRequestFailureHandler.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/BufferingNoOpRequestIndexer.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/ElasticsearchApiCallBridge.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/ElasticsearchSinkBase.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/ElasticsearchSinkFunction.java
+       inlong-sort/sort-flink/sort-flink-v1.15/sort-connectors/elasticsearch-base/src/main/java/org/apache/inlong/sort/elasticsearch/RequestIndexer.java
+Source  : org.apache.flink:flink-connector-elasticsearch-base-1.5.4.jar (Please note that the software have been modified.)
+License : https://github.com/apache/flink/blob/master/LICENSE
 
 =======================================================================
 Apache InLong Subcomponents:

@@ -36,6 +36,7 @@ public class TaskResult {
     private List<CmdConfig> cmdConfigs;
     private List<DataConfig> dataConfigs;
     private String md5;
+    private Integer version;
     AgentResponseCode code;
 
 }

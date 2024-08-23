@@ -25,6 +25,7 @@ import org.apache.inlong.sort.standalone.channel.ProfileEvent;
 import org.apache.inlong.sort.standalone.config.holder.CommonPropertiesHolder;
 import org.apache.inlong.sort.standalone.config.holder.SortClusterConfigHolder;
 import org.apache.inlong.sort.standalone.config.holder.v2.SortConfigHolder;
+import org.apache.inlong.sort.standalone.config.pojo.CacheClusterConfig;
 import org.apache.inlong.sort.standalone.config.pojo.InlongId;
 import org.apache.inlong.sort.standalone.metrics.SortConfigMetricReporter;
 import org.apache.inlong.sort.standalone.metrics.SortMetricItem;
@@ -52,6 +53,7 @@ public class KafkaFederationSinkContext extends SinkContext {
     public static final String KEY_EVENT_HANDLER = "eventHandler";
 
     private KafkaNodeConfig kafkaNodeConfig;
+    private CacheClusterConfig cacheClusterConfig;
     private Map<String, KafkaIdConfig> idConfigMap = new ConcurrentHashMap<>();
 
     public KafkaFederationSinkContext(String sinkName, Context context, Channel channel) {
@@ -74,13 +76,21 @@ public class KafkaFederationSinkContext extends SinkContext {
                 LOG.info("Same sortTaskConfig, do nothing.");
                 return;
             }
-            KafkaNodeConfig requestNodeConfig = (KafkaNodeConfig) newTaskConfig.getNodeConfig();
-            if (kafkaNodeConfig == null || requestNodeConfig.getVersion() > kafkaNodeConfig.getVersion()) {
-                this.kafkaNodeConfig = requestNodeConfig;
+
+            if (newTaskConfig != null) {
+                KafkaNodeConfig requestNodeConfig = (KafkaNodeConfig) newTaskConfig.getNodeConfig();
+                if (kafkaNodeConfig == null || requestNodeConfig.getVersion() > kafkaNodeConfig.getVersion()) {
+                    this.kafkaNodeConfig = requestNodeConfig;
+                }
             }
 
             this.taskConfig = newTaskConfig;
             this.sortTaskConfig = newSortTaskConfig;
+
+            CacheClusterConfig clusterConfig = new CacheClusterConfig();
+            clusterConfig.setClusterName(this.taskName);
+            clusterConfig.setParams(this.sortTaskConfig.getSinkParams());
+            this.cacheClusterConfig = clusterConfig;
 
             Map<String, KafkaIdConfig> fromTaskConfig = fromTaskConfig(taskConfig);
             Map<String, KafkaIdConfig> fromSortTaskConfig = fromSortTaskConfig(sortTaskConfig);
@@ -92,6 +102,9 @@ public class KafkaFederationSinkContext extends SinkContext {
     }
 
     public Map<String, KafkaIdConfig> fromTaskConfig(TaskConfig taskConfig) {
+        if (taskConfig == null) {
+            return new HashMap<>();
+        }
         return taskConfig.getClusterTagConfigs()
                 .stream()
                 .map(ClusterTagConfig::getDataFlowConfigs)
@@ -104,6 +117,10 @@ public class KafkaFederationSinkContext extends SinkContext {
     }
 
     public Map<String, KafkaIdConfig> fromSortTaskConfig(SortTaskConfig sortTaskConfig) {
+        if (sortTaskConfig == null) {
+            return new HashMap<>();
+        }
+
         List<Map<String, String>> idList = sortTaskConfig.getIdParams();
         Map<String, KafkaIdConfig> newIdConfigMap = new ConcurrentHashMap<>();
         for (Map<String, String> idParam : idList) {
@@ -119,6 +136,10 @@ public class KafkaFederationSinkContext extends SinkContext {
 
     public KafkaNodeConfig getNodeConfig() {
         return kafkaNodeConfig;
+    }
+
+    public CacheClusterConfig getCacheClusterConfig() {
+        return cacheClusterConfig;
     }
 
     /**

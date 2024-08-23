@@ -19,6 +19,7 @@ package org.apache.inlong.sdk.transform.encode;
 
 import org.apache.inlong.sdk.transform.pojo.CsvSinkInfo;
 import org.apache.inlong.sdk.transform.pojo.FieldInfo;
+import org.apache.inlong.sdk.transform.process.Context;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -28,7 +29,7 @@ import java.util.List;
 /**
  * CsvSinkEncoder
  */
-public class CsvSinkEncoder implements SinkEncoder {
+public class CsvSinkEncoder implements SinkEncoder<String> {
 
     protected CsvSinkInfo sinkInfo;
     protected Charset sinkCharset = Charset.defaultCharset();
@@ -39,11 +40,11 @@ public class CsvSinkEncoder implements SinkEncoder {
 
     public CsvSinkEncoder(CsvSinkInfo sinkInfo) {
         this.sinkInfo = sinkInfo;
-        if (!StringUtils.isBlank(sinkInfo.getDelimiter())) {
-            this.delimiter = sinkInfo.getDelimiter().charAt(0);
+        if (sinkInfo.getDelimiter() != null) {
+            this.delimiter = sinkInfo.getDelimiter();
         }
-        if (!StringUtils.isBlank(sinkInfo.getEscapeChar())) {
-            this.escapeChar = sinkInfo.getEscapeChar().charAt(0);
+        if (sinkInfo.getDelimiter() != null) {
+            this.escapeChar = sinkInfo.getEscapeChar();
         }
         if (!StringUtils.isBlank(sinkInfo.getCharset())) {
             this.sinkCharset = Charset.forName(sinkInfo.getCharset());
@@ -57,7 +58,7 @@ public class CsvSinkEncoder implements SinkEncoder {
      * @return
      */
     @Override
-    public String encode(SinkData sinkData) {
+    public String encode(SinkData sinkData, Context context) {
         builder.delete(0, builder.length());
         if (fields == null || fields.size() == 0) {
             if (escapeChar == null) {

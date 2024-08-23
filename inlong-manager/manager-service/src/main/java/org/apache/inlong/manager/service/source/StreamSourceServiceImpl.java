@@ -190,7 +190,8 @@ public class StreamSourceServiceImpl implements StreamSourceService {
 
         // if the group mode is DATASYNC, just get all related stream sources
         List<StreamSource> streamSources = this.listSource(groupId, null);
-        if (InlongConstants.DATASYNC_MODE.equals(groupInfo.getInlongGroupMode())) {
+        if (InlongConstants.DATASYNC_REALTIME_MODE.equals(groupInfo.getInlongGroupMode())
+                || InlongConstants.DATASYNC_OFFLINE_MODE.equals(groupInfo.getInlongGroupMode())) {
             result = streamSources.stream()
                     .collect(Collectors.groupingBy(StreamSource::getInlongStreamId, HashMap::new,
                             Collectors.toCollection(ArrayList::new)));
@@ -293,7 +294,7 @@ public class StreamSourceServiceImpl implements StreamSourceService {
         InlongGroupEntity groupEntity = groupCheckService.checkGroupStatus(groupId, operator);
         if (groupEntity == null) {
             throw new BusinessException(ErrorCodeEnum.GROUP_NOT_FOUND,
-                    String.format("InlongGroup does not exist with InlongGroupId=%s", groupEntity.getInlongGroupId()));
+                    String.format("InlongGroup does not exist with InlongGroupId=%s", groupId));
         }
         StreamSourceOperator sourceOperator = operatorFactory.getInstance(request.getSourceType());
         // Remove id in sourceField when save
@@ -342,11 +343,6 @@ public class StreamSourceServiceImpl implements StreamSourceService {
                 || SourceType.AUTO_PUSH.equals(entity.getSourceType())) {
             nextStatus = SourceStatus.SOURCE_DISABLE;
         }
-        if (!SourceStatus.isAllowedTransition(curStatus, nextStatus)) {
-            throw new BusinessException(
-                    String.format("current source status=%s for id=%s is not allowed to delete", entity.getStatus(),
-                            entity.getId()));
-        }
 
         entity.setPreviousStatus(curStatus.getCode());
         entity.setStatus(nextStatus.getCode());
@@ -359,7 +355,9 @@ public class StreamSourceServiceImpl implements StreamSourceService {
             throw new BusinessException(ErrorCodeEnum.CONFIG_EXPIRED);
         }
         sourceFieldMapper.deleteAll(id);
-
+        SourceRequest request = CommonBeanUtils.copyProperties(entity, SourceRequest::new, true);
+        StreamSourceOperator sourceOperator = operatorFactory.getInstance(request.getSourceType());
+        sourceOperator.updateAgentTaskConfig(request, operator);
         LOGGER.info("success to delete source for id={} by user={}", id, operator);
         return true;
     }

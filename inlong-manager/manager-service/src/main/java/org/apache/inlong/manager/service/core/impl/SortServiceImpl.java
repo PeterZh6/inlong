@@ -25,6 +25,7 @@ import org.apache.inlong.common.pojo.sort.TaskConfig;
 import org.apache.inlong.common.pojo.sort.dataflow.DataFlowConfig;
 import org.apache.inlong.common.pojo.sort.mq.MqClusterConfig;
 import org.apache.inlong.common.pojo.sort.mq.PulsarClusterConfig;
+import org.apache.inlong.common.pojo.sort.mq.TubeClusterConfig;
 import org.apache.inlong.common.pojo.sort.node.NodeConfig;
 import org.apache.inlong.common.pojo.sortstandalone.SortClusterResponse;
 import org.apache.inlong.common.util.Utils;
@@ -42,8 +43,8 @@ import org.apache.inlong.manager.pojo.group.InlongGroupInfo;
 import org.apache.inlong.manager.pojo.sort.SortStatusInfo;
 import org.apache.inlong.manager.pojo.sort.SortStatusRequest;
 import org.apache.inlong.manager.pojo.stream.InlongStreamInfo;
+import org.apache.inlong.manager.service.core.ConfigLoader;
 import org.apache.inlong.manager.service.core.SortClusterService;
-import org.apache.inlong.manager.service.core.SortConfigLoader;
 import org.apache.inlong.manager.service.core.SortService;
 import org.apache.inlong.manager.service.core.SortSourceService;
 import org.apache.inlong.manager.service.group.InlongGroupService;
@@ -99,7 +100,7 @@ public class SortServiceImpl implements SortService, PluginBinder {
     @Autowired
     private InlongStreamService streamService;
     @Autowired
-    private SortConfigLoader configLoader;
+    private ConfigLoader configLoader;
     @Autowired
     private DataNodeOperatorFactory dataNodeOperatorFactory;
     /**
@@ -152,7 +153,7 @@ public class SortServiceImpl implements SortService, PluginBinder {
     private void setReloadTimer() {
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
         long reloadInterval = 60000L;
-        executorService.scheduleAtFixedRate(this::reload, reloadInterval, reloadInterval, TimeUnit.MILLISECONDS);
+        executorService.scheduleWithFixedDelay(this::reload, reloadInterval, reloadInterval, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -216,7 +217,7 @@ public class SortServiceImpl implements SortService, PluginBinder {
             String errMsg = String.format("there is no valid sort config of cluster %s", clusterName);
             log.debug(errMsg);
             return SortConfigResponse.builder()
-                    .code(RESPONSE_CODE_SUCCESS)
+                    .code(RESPONSE_CODE_FAIL)
                     .msg(errMsg)
                     .build();
         }
@@ -244,6 +245,11 @@ public class SortServiceImpl implements SortService, PluginBinder {
                         JsonUtils.parseArray(clusterConfigEntity.getConfigParams(),
                                 PulsarClusterConfig.class);
                 List<MqClusterConfig> list = new ArrayList<>(pulsarClusterConfigs);
+                tempMqClusterMap.putIfAbsent(clusterTag, list);
+            } else if (ClusterType.TUBEMQ.equals(clusterConfigEntity.getClusterType())) {
+                List<TubeClusterConfig> tubeClusterConfigs =
+                        JsonUtils.parseArray(clusterConfigEntity.getConfigParams(), TubeClusterConfig.class);
+                List<MqClusterConfig> list = new ArrayList<>(tubeClusterConfigs);
                 tempMqClusterMap.putIfAbsent(clusterTag, list);
             }
         });

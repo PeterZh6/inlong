@@ -46,6 +46,8 @@ public enum OperationTarget {
 
     TENANT_ROLE,
 
-    TEMPLATE
+    TEMPLATE,
+
+    SCHEDULE
 
 }

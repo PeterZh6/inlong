@@ -30,6 +30,7 @@ import org.apache.inlong.agent.utils.ThreadUtils;
 import org.apache.inlong.common.enums.PullJobTypeEnum;
 import org.apache.inlong.common.pojo.agent.AgentConfigInfo;
 import org.apache.inlong.common.pojo.agent.AgentConfigRequest;
+import org.apache.inlong.common.pojo.agent.AgentResponseCode;
 import org.apache.inlong.common.pojo.agent.DataConfig;
 import org.apache.inlong.common.pojo.agent.TaskRequest;
 import org.apache.inlong.common.pojo.agent.TaskResult;
@@ -162,6 +163,7 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
 
     public TaskRequest getTaskRequest() {
         TaskRequest request = new TaskRequest();
+        request.setMd5(agentManager.getTaskManager().getTaskResultMd5());
         request.setAgentIp(localIp);
         request.setUuid(uuid);
         request.setClusterName(clusterName);
@@ -172,6 +174,9 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
 
     public AgentConfigRequest getAgentConfigInfoRequest() {
         AgentConfigRequest request = new AgentConfigRequest();
+        if (AgentManager.getAgentConfigInfo() != null) {
+            request.setMd5(AgentManager.getAgentConfigInfo().getMd5());
+        }
         request.setClusterTag(clusterTag);
         request.setClusterName(clusterName);
         request.setIp(localIp);
@@ -189,17 +194,23 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
             while (isRunnable()) {
                 try {
                     TaskResult taskResult = getStaticConfig();
-                    if (taskResult != null) {
+                    if (taskResult != null && taskResult.getCode().equals(AgentResponseCode.SUCCESS)
+                            && agentManager.getTaskManager().getTaskResultVersion() < taskResult.getVersion()) {
                         List<TaskProfile> taskProfiles = new ArrayList<>();
                         taskResult.getDataConfigs().forEach((config) -> {
                             TaskProfile profile = TaskProfile.convertToTaskProfile(config);
                             taskProfiles.add(profile);
                         });
                         agentManager.getTaskManager().submitTaskProfiles(taskProfiles);
+                        agentManager.getTaskManager().setTaskResultMd5(taskResult.getMd5());
+                        agentManager.getTaskManager().setTaskResultVersion(taskResult.getVersion());
                     }
                     AgentConfigInfo config = getAgentConfigInfo();
-                    if (config != null) {
-                        agentManager.subNewAgentConfigInfo(config);
+                    if (config != null && config.getCode().equals(AgentResponseCode.SUCCESS)) {
+                        if (AgentManager.getAgentConfigInfo() == null
+                                || AgentManager.getAgentConfigInfo().getVersion() < config.getVersion()) {
+                            agentManager.subNewAgentConfigInfo(config);
+                        }
                     }
                 } catch (Throwable ex) {
                     LOGGER.warn("exception caught", ex);

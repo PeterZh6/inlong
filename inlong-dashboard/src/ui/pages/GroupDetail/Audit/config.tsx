@@ -160,7 +160,7 @@ let endTimeVisible = true;
 export const getFormContent = (inlongGroupId, initialValues, onSearch, onDataStreamSuccess) => [
   {
     type: 'select',
-    label: i18n.t('pages.GroupDetail.Audit.DataStream'),
+    label: i18n.t('pages.ModuleAudit.config.InlongStreamId'),
     name: 'inlongStreamId',
     props: {
       dropdownMatchSelectWidth: false,
@@ -304,14 +304,25 @@ export const getFormContent = (inlongGroupId, initialValues, onSearch, onDataStr
           return request('/audit/getAuditBases');
         },
         requestParams: {
-          formatResult: result =>
-            result?.map(item => ({
-              label: item.nameInChinese,
-              value: item.auditId,
-            })) || [],
+          formatResult: result => {
+            return result?.reduce((accumulator, item) => {
+              const existingItem = accumulator.find(
+                (i: { value: any }) => i.value === item.auditId,
+              );
+              if (!existingItem) {
+                accumulator.push({
+                  label: i18n?.language === 'cn' ? item.nameInChinese : item.nameInEnglish,
+                  value: item.auditId,
+                });
+              }
+              return accumulator;
+            }, []);
+          },
         },
       },
-      filterOption: (keyword, option) => option.label.includes(keyword),
+      filterOption: (keyword: string, option: { label: any }) => {
+        return (option?.label ?? '').toLowerCase().includes(keyword.toLowerCase());
+      },
     },
   },
   {
@@ -328,13 +339,12 @@ export const getTableColumns = (source, dim) => {
     title: item.auditName,
     dataIndex: item.auditId,
     render: text => {
-      let color = 'black';
       if (text?.includes('+')) {
-        color = 'red';
+        return <span style={{ color: 'red' }}>{text}</span>;
       } else if (text?.includes('-')) {
-        color = 'green';
+        return <span style={{ color: 'green' }}>{text}</span>;
       }
-      return <span style={{ color: color }}>{text}</span>;
+      return <span>{text}</span>;
     },
   }));
   return [
