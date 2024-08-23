@@ -74,10 +74,6 @@ public class FlinkParallelismOptimizer {
     private static final double SECONDS_PER_HOUR = 3600.0;
     private static final String AUDIT_CYCLE_REALTIME = "1";
 
-    public FlinkParallelismOptimizer() {
-        this.maximumMessagePerSecondPerCore = DEFAULT_MAXIMUM_MESSAGE_PER_SECOND_PER_CORE;
-    }
-
 
     /**
      * Calculate recommended parallelism based on maximum message per second per core
@@ -109,6 +105,7 @@ public class FlinkParallelismOptimizer {
      */
     public void setMaximumMessagePerSecondPerCore(Integer maximumMessagePerSecondPerCore) {
         if (maximumMessagePerSecondPerCore == null || maximumMessagePerSecondPerCore <= 0) {
+            this.maximumMessagePerSecondPerCore = DEFAULT_MAXIMUM_MESSAGE_PER_SECOND_PER_CORE;
             log.error("Illegal flink.maxpercore property, must be nonnull and positive, using default value: {}", DEFAULT_MAXIMUM_MESSAGE_PER_SECOND_PER_CORE);
         } else {
             this.maximumMessagePerSecondPerCore = maximumMessagePerSecondPerCore;
