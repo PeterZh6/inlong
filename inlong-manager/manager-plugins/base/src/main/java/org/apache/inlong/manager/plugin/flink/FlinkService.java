@@ -212,6 +212,7 @@ public class FlinkService {
         }).filter(Objects::nonNull).collect(Collectors.toList());
 
         Configuration configuration = getFlinkConfiguration(flinkInfo.getEndpoint());
+        log.debug("flink info: {}", flinkInfo);
         parallelism = flinkConfig.getParallelism();
         if (flinkConfig.getDynamicParallelism()) {
 

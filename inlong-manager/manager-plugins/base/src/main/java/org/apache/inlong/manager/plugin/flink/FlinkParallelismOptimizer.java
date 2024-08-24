@@ -35,12 +35,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.StringJoiner;
 
 import static java.lang.Math.ceil;
+import static org.apache.inlong.audit.config.OpenApiConstants.*;
+import static org.apache.inlong.manager.common.consts.InlongConstants.*;
+
 
 /**
  *     This class is used to calculate the recommended parallelism based on the maximum message per second per core.
@@ -55,26 +59,16 @@ public class FlinkParallelismOptimizer {
     public String auditQueryUrl;
 
     private static final long DEFAULT_DATA_VOLUME = 1000;
-    private static final long DEFAULT_MAXIMUM_MESSAGE_PER_SECOND_PER_CORE = 1000;
     private static final int MAX_PARALLELISM = 2048;
-    private long maximumMessagePerSecondPerCore;
+    private long maximumMessagePerSecondPerCore = 1000L;
     private static final int DEFAULT_PARALLELISM = 1;
     private static final long DEFAULT_ERROR_DATA_COUNT = 0L;
-    private static final String PARAMS_START_TIME = "startTime";
-    private static final String PARAMS_END_TIME = "endTime";
-    private static final String PARAMS_AUDIT_ID = "auditId";
-    private static final String PARAMS_AUDIT_CYCLE = "auditCycle";
-    private static final String PARAMS_INLONG_GROUP_ID = "inlongGroupId";
-    private static final String PARAMS_INLONG_STREAM_ID = "inlongStreamId";
-    private static final String DEFAULT_API_MINUTES_PATH = "/audit/query/minutes";
     private static final FlowType DEFAULT_FLOWTYPE = FlowType.OUTPUT;
     private static final String DEFAULT_AUDIT_TYPE = "DataProxy";
-    private static final String AMPERSAND = "&";
-    private static final String EQUAL = "=";
-    private static final String QUESTION_MARK = "?";
     private static final double SECONDS_PER_HOUR = 3600.0;
     private static final String AUDIT_CYCLE_REALTIME = "1";
     private static final String AUDIT_QUERY_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS"; //sample time format: 2024-08-23T22:47:38.866
+    private static final String TIMEZONE_REGEX = "([+-])(\\d):";
 
 
     /**
@@ -107,8 +101,7 @@ public class FlinkParallelismOptimizer {
      */
     public void setMaximumMessagePerSecondPerCore(Integer maximumMessagePerSecondPerCore) {
         if (maximumMessagePerSecondPerCore == null || maximumMessagePerSecondPerCore <= 0) {
-            this.maximumMessagePerSecondPerCore = DEFAULT_MAXIMUM_MESSAGE_PER_SECOND_PER_CORE;
-            log.error("Illegal flink.maxpercore property, must be nonnull and positive, using default value: {}", DEFAULT_MAXIMUM_MESSAGE_PER_SECOND_PER_CORE);
+            log.error("Illegal flink.maxpercore property, must be nonnull and positive, using default value: {}", maximumMessagePerSecondPerCore);
         } else {
             this.maximumMessagePerSecondPerCore = maximumMessagePerSecondPerCore;
         }
@@ -121,17 +114,27 @@ public class FlinkParallelismOptimizer {
      * @return The average data count per hour
      */
     private long getAverageDataVolumePerHour(InlongStreamInfo streamInfo) {
-        // Since the audit module use local time, we need to use ZonedDateTime to get the current time
-        ZonedDateTime endTime = ZonedDateTime.now();
+        // Since the audit module uses local time, we need to use ZonedDateTime to get the current time
+        String dataTimeZone = streamInfo.getSourceList().get(0).getDataTimeZone();
+
+        // This regex pattern matches a time zone offset in the format of "GMT+/-X:00"
+        // where X is a single digit (e.g., "GMT+8:00"). The pattern captures the "+" or "-" sign
+        // and the single digit, then it replaces the single digit with two digits by adding a "0" in front of it.
+        // For example, "GMT+8:00" becomes "GMT+08:00" in order to match standard offset-based ZoneId.
+        dataTimeZone = dataTimeZone.replaceAll(TIMEZONE_REGEX, "$10$2:");
+        ZoneId dataZone = ZoneId.of(dataTimeZone);
+
+        ZonedDateTime endTime = ZonedDateTime.now(dataZone);
         ZonedDateTime startTime = endTime.minusHours(1);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AUDIT_QUERY_DATE_TIME_FORMAT);
 
+        // counting data volume on with DATA_PROXY_OUTPUT auditId
         int auditId = AuditIdEnum.getAuditId(DEFAULT_AUDIT_TYPE, DEFAULT_FLOWTYPE).getValue();
         StringJoiner urlParameters = new StringJoiner(AMPERSAND)
                 .add(PARAMS_START_TIME + EQUAL + startTime.format(formatter))
                 .add(PARAMS_END_TIME + EQUAL + endTime.format(formatter))
-                .add(PARAMS_INLONG_GROUP_ID + EQUAL + streamInfo.getInlongGroupId())
-                .add(PARAMS_INLONG_STREAM_ID + EQUAL + streamInfo.getInlongStreamId())
+                .add(PARAMS_INLONG_GROUP_Id + EQUAL + streamInfo.getInlongGroupId())
+                .add(PARAMS_INLONG_STREAM_Id + EQUAL + streamInfo.getInlongStreamId())
                 .add(PARAMS_AUDIT_ID + EQUAL + auditId)
                 .add(PARAMS_AUDIT_CYCLE + EQUAL + AUDIT_CYCLE_REALTIME);
 
@@ -177,7 +180,7 @@ public class FlinkParallelismOptimizer {
         }
 
         String responseString = EntityUtils.toString(entity);
-        log.info("Response: {}", responseString);
+        log.info("Flink dynamic parallelism optimizer got response from audit API: {}", responseString);
 
         JsonObject jsonObject = JsonParser.parseString(responseString).getAsJsonObject();
         AuditInfo[] auditDataArray = new Gson().fromJson(jsonObject.getAsJsonArray("data"), AuditInfo[].class);

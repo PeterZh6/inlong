@@ -5,7 +5,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
 /**
- * Get the ApplicationContext
+ * Get the Spring ApplicationContext
+ * instantiate class with Spring in non-Spring managed environment
  */
 @Component
 public class ApplicationContextProvider implements ApplicationContextAware {
