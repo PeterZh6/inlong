@@ -64,16 +64,18 @@ public class FlinkParallelismOptimizer {
     @Value("${audit.query.url:http://127.0.0.1:10080}")
     public String auditQueryUrl;
 
-    private static final long DEFAULT_DATA_VOLUME = 1000;
     private static final int MAX_PARALLELISM = 2048;
     private long maximumMessagePerSecondPerCore = 1000L;
     private static final int DEFAULT_PARALLELISM = 1;
-    private static final long DEFAULT_ERROR_DATA_COUNT = 0L;
+    private static final long DEFAULT_ERROR_DATA_VOLUME = 0L;
     private static final FlowType DEFAULT_FLOWTYPE = FlowType.OUTPUT;
     private static final String DEFAULT_AUDIT_TYPE = "DataProxy";
-    private static final double SECONDS_PER_HOUR = 3600.0;
     private static final String AUDIT_CYCLE_REALTIME = "1";
+    // maxmimum data scale counting range in hours
+    private static final int DATA_SCALE_COUNTING_RANGE_IN_HOURS = 1;
     private static final String AUDIT_QUERY_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS"; //sample time format: 2024-08-23T22:47:38.866
+
+    private static final String LOGTS_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private static final String TIMEZONE_REGEX = "([+-])(\\d):";
 
 
@@ -83,20 +85,20 @@ public class FlinkParallelismOptimizer {
      * @return Recommended parallelism
      */
     public int calculateRecommendedParallelism(List<InlongStreamInfo> streamInfos) {
-        long dataVolume;
+        long averageDataVolume;
         InlongStreamInfo streamInfo = streamInfos.get(0);
         try {
-            dataVolume = getAverageDataVolumePerHour(streamInfo);
-            log.info("Retrieved data volume: {}", dataVolume);
+            averageDataVolume = getAverageDataVolume(streamInfo);
+            log.info("Retrieved data volume: {}", averageDataVolume);
         } catch (Exception e) {
             log.error("Error retrieving data volume: {}", e.getMessage(), e);
-            log.warn("Using default data volume: {}", DEFAULT_DATA_VOLUME);
-            dataVolume = DEFAULT_DATA_VOLUME;
+            log.warn("Using default data volume: {}", DEFAULT_ERROR_DATA_VOLUME);
+            averageDataVolume = DEFAULT_ERROR_DATA_VOLUME;
         }
-        int newParallelism = (int) ceil((double) dataVolume / maximumMessagePerSecondPerCore);
+        int newParallelism = (int) (averageDataVolume / maximumMessagePerSecondPerCore);
         newParallelism = Math.max(newParallelism, DEFAULT_PARALLELISM); // Ensure parallelism is at least the default value
         newParallelism = Math.min(newParallelism, MAX_PARALLELISM); // Ensure parallelism is at most MAX_PARALLELISM
-        log.info("Calculated parallelism: {} for data volume: {}", newParallelism, dataVolume);
+        log.info("Calculated parallelism: {} for data volume: {}", newParallelism, averageDataVolume);
         return newParallelism;
     }
 
@@ -114,12 +116,12 @@ public class FlinkParallelismOptimizer {
     }
 
     /**
-     * Get data scale on a minutes scale
+     * Get average data volume on the scale specified by DATA_SCALE_COUNTING_RANGE_IN_HOURS
      *
      * @param streamInfo inlong stream info
      * @return The average data count per hour
      */
-    private long getAverageDataVolumePerHour(InlongStreamInfo streamInfo) {
+    private long getAverageDataVolume(InlongStreamInfo streamInfo) {
         // Since the audit module uses local time, we need to use ZonedDateTime to get the current time
         String dataTimeZone = streamInfo.getSourceList().get(0).getDataTimeZone();
 
@@ -131,7 +133,7 @@ public class FlinkParallelismOptimizer {
         ZoneId dataZone = ZoneId.of(dataTimeZone);
 
         ZonedDateTime endTime = ZonedDateTime.now(dataZone);
-        ZonedDateTime startTime = endTime.minusHours(1);
+        ZonedDateTime startTime = endTime.minusHours(DATA_SCALE_COUNTING_RANGE_IN_HOURS);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AUDIT_QUERY_DATE_TIME_FORMAT);
 
         // counting data volume on with DATA_PROXY_OUTPUT auditId
@@ -145,9 +147,8 @@ public class FlinkParallelismOptimizer {
                 .add(PARAMS_AUDIT_CYCLE + EQUAL + AUDIT_CYCLE_REALTIME);
 
         String url = auditQueryUrl + DEFAULT_API_MINUTES_PATH + QUESTION_MARK + urlParameters;
-        long totalCount = getCountFromAuditInfo(url);
 
-        return totalCount == DEFAULT_ERROR_DATA_COUNT ? DEFAULT_ERROR_DATA_COUNT : (long) (totalCount / SECONDS_PER_HOUR);
+        return getAverageDataVolumeFromAuditInfo(url);
     }
 
     /**
@@ -156,19 +157,19 @@ public class FlinkParallelismOptimizer {
      * @param url The URL to request data from
      * @return The total count of the audit data
      */
-    private long getCountFromAuditInfo(String url) {
+    private long getAverageDataVolumeFromAuditInfo(String url) {
         log.debug("Requesting audit data from URL: {}", url);
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet httpGet = new HttpGet(url);
             try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
-                return parseResponse(response);
+                return parseResponseAndCalculateAverageDataVolume(response);
             } catch (IOException e) {
                 log.error("Error executing HTTP request to audit API: {}", url, e);
             }
         } catch (IOException e) {
             log.error("Error creating or closing HTTP client: {}", url, e);
         }
-        return DEFAULT_ERROR_DATA_COUNT;
+        return DEFAULT_ERROR_DATA_VOLUME;
     }
 
     /**
@@ -178,28 +179,46 @@ public class FlinkParallelismOptimizer {
      * @return The total count of the audit data
      * @throws IOException If an I/O error occurs
      */
-    private long parseResponse(CloseableHttpResponse response) throws IOException {
+    private long parseResponseAndCalculateAverageDataVolume(CloseableHttpResponse response) throws IOException {
         HttpEntity entity = response.getEntity();
         if (entity == null) {
             log.warn("Empty response entity from audit API, returning default count.");
-            return DEFAULT_ERROR_DATA_COUNT;
+            return DEFAULT_ERROR_DATA_VOLUME;
         }
 
         String responseString = EntityUtils.toString(entity);
-        log.info("Flink dynamic parallelism optimizer got response from audit API: {}", responseString);
+        log.debug("Flink dynamic parallelism optimizer got response from audit API: {}", responseString);
 
         JsonObject jsonObject = JsonParser.parseString(responseString).getAsJsonObject();
-        AuditInfo[] auditDataArray = new Gson().fromJson(jsonObject.getAsJsonArray("data"), AuditInfo[].class);
+        AuditInfo[] auditInfoArray = new Gson().fromJson(jsonObject.getAsJsonArray("data"), AuditInfo[].class);
 
+        ZonedDateTime minLogTs = null;
+        ZonedDateTime maxLogTs = null;
+        DateTimeFormatter logTsFormatter = DateTimeFormatter.ofPattern(LOGTS_DATE_TIME_FORMAT).withZone(ZoneId.systemDefault());
         long totalCount = 0L;
-        for (AuditInfo auditData : auditDataArray) {
+        for (AuditInfo auditData : auditInfoArray) {
             if (auditData != null) {
-                log.debug("AuditInfo Count: {}, Size: {}", auditData.getCount(), auditData.getSize());
+                ZonedDateTime logTs = ZonedDateTime.parse(auditData.getLogTs(), logTsFormatter);
+                if (minLogTs == null || logTs.isBefore(minLogTs)) {
+                    minLogTs = logTs;
+                }
+                if (maxLogTs == null || logTs.isAfter(maxLogTs)) {
+                    maxLogTs = logTs;
+                }
+                log.debug("parsed AuditInfo, Count: {}, Size: {}", auditData.getCount(), auditData.getSize());
                 totalCount += auditData.getCount();
             } else {
                 log.error("Null AuditInfo found in response data.");
             }
         }
-        return totalCount;
+
+        if (minLogTs != null && maxLogTs != null) {
+            long timeDifferenceInSeconds = maxLogTs.toEpochSecond() - minLogTs.toEpochSecond();
+            log.info("Time difference in seconds: {}", timeDifferenceInSeconds);
+            if (timeDifferenceInSeconds > 0) {
+                return totalCount / timeDifferenceInSeconds;
+            }
+        }
+        return DEFAULT_ERROR_DATA_VOLUME;
     }
 }
