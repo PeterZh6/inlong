@@ -42,7 +42,13 @@ import java.util.List;
 import java.util.StringJoiner;
 
 import static java.lang.Math.ceil;
-import static org.apache.inlong.audit.config.OpenApiConstants.*;
+import static org.apache.inlong.audit.consts.OpenApiConstants.DEFAULT_API_MINUTES_PATH;
+import static org.apache.inlong.audit.consts.OpenApiConstants.PARAMS_AUDIT_CYCLE;
+import static org.apache.inlong.audit.consts.OpenApiConstants.PARAMS_AUDIT_ID;
+import static org.apache.inlong.audit.consts.OpenApiConstants.PARAMS_END_TIME;
+import static org.apache.inlong.audit.consts.OpenApiConstants.PARAMS_INLONG_GROUP_Id;
+import static org.apache.inlong.audit.consts.OpenApiConstants.PARAMS_INLONG_STREAM_Id;
+import static org.apache.inlong.audit.consts.OpenApiConstants.PARAMS_START_TIME;
 import static org.apache.inlong.manager.common.consts.InlongConstants.*;
 
 
