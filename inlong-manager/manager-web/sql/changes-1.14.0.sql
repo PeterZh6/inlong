@@ -15,29 +15,13 @@
  * limitations under the License.
  */
 
-package org.apache.inlong.manager.pojo.sink;
+-- This is the SQL change file from version 1.13.0 to the current version 1.14.0.
+-- When upgrading to version 1.14.0, please execute those SQLs in the DB (such as MySQL) used by the Manager module.
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
 
-/**
- * The base parameter class of StreamSink, support user extend their own business params.
- */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@ApiModel("Base info of stream sink")
-public class BaseStreamSink {
+USE `apache_inlong_manager`;
 
-    @ApiModelProperty("Transform sql")
-    private String transformSql;
+ALTER TABLE `inlong_cluster_node` ADD COLUMN `operate_log`  text DEFAULT NULL COMMENT 'The operate log';
 
-    @ApiModelProperty("Start consume time, yyyy-MM-dd HH:mm:ss format")
-    private String startConsumeTime;
-
-    @ApiModelProperty("Stop consume time, yyyy-MM-dd HH:mm:ss format")
-    private String stopConsumeTime;
-}
