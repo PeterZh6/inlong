@@ -21,6 +21,7 @@ import org.apache.inlong.audit.AuditReporterImpl;
 import org.apache.inlong.sort.base.metric.MetricOption.RegisteredMetric;
 
 import org.apache.flink.metrics.Counter;
+import org.apache.flink.metrics.Gauge;
 import org.apache.flink.metrics.Meter;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.SimpleCounter;
@@ -39,6 +40,7 @@ import static org.apache.inlong.sort.base.Constants.NUM_BYTES_OUT_PER_SECOND;
 import static org.apache.inlong.sort.base.Constants.NUM_RECORDS_OUT;
 import static org.apache.inlong.sort.base.Constants.NUM_RECORDS_OUT_FOR_METER;
 import static org.apache.inlong.sort.base.Constants.NUM_RECORDS_OUT_PER_SECOND;
+import static org.apache.inlong.sort.base.Constants.SERIALIZE_TIME_LAG;
 import static org.apache.inlong.sort.base.util.CalculateObjectSizeUtils.getDataSize;
 
 /**
@@ -55,6 +57,7 @@ public class SinkExactlyMetric implements MetricData, Serializable {
     private AuditReporterImpl auditReporter;
     private Counter numRecordsOut;
     private Counter numBytesOut;
+    private Gauge<Long> serializeTimeLag;
     private Counter numRecordsOutForMeter;
     private Counter numBytesOutForMeter;
     private Counter dirtyRecordsOut;
@@ -64,6 +67,11 @@ public class SinkExactlyMetric implements MetricData, Serializable {
     private List<Integer> auditKeys;
     private Long currentCheckpointId = 0L;
     private Long lastCheckpointId = 0L;
+
+    /**
+     * serializeDelay = SerializeTime - messageTimestamp, where the SerializeTime is the time the record
+     */
+    private volatile long serializeDelay = 0L;
 
     public SinkExactlyMetric(MetricOption option, MetricGroup metricGroup) {
         this.metricGroup = metricGroup;
@@ -88,6 +96,7 @@ public class SinkExactlyMetric implements MetricData, Serializable {
                 registerMetricsForNumRecordsOutForMeter(new ThreadSafeCounter());
                 registerMetricsForNumBytesOutPerSecond();
                 registerMetricsForNumRecordsOutPerSecond();
+                registerMetricsForSerializeTimeLag();
                 break;
             default:
                 recordsOutCounter.inc(option.getInitRecords());
@@ -180,6 +189,10 @@ public class SinkExactlyMetric implements MetricData, Serializable {
         registerMetricsForDirtyBytesOut(new SimpleCounter());
     }
 
+    public void registerMetricsForSerializeTimeLag() {
+        serializeTimeLag = registerGauge(SERIALIZE_TIME_LAG, (Gauge<Long>) this::getSerializeDelay);
+    }
+
     public void registerMetricsForDirtyBytesOut(Counter counter) {
         dirtyBytesOut = registerCounter(DIRTY_BYTES_OUT, counter);
     }
@@ -206,6 +219,18 @@ public class SinkExactlyMetric implements MetricData, Serializable {
 
     public Meter getNumBytesOutPerSecond() {
         return numBytesOutPerSecond;
+    }
+
+    public Gauge getSerializeTimeLag() {
+        return serializeTimeLag;
+    }
+
+    public void recordSerializeDelay(long serializeDelay) {
+        this.serializeDelay = serializeDelay;
+    }
+
+    public long getSerializeDelay() {
+        return serializeDelay;
     }
 
     @Override
@@ -280,6 +305,7 @@ public class SinkExactlyMetric implements MetricData, Serializable {
         }
     }
 
+
     public void flushAudit() {
         if (auditReporter != null) {
             auditReporter.flush(lastCheckpointId);
@@ -313,6 +339,7 @@ public class SinkExactlyMetric implements MetricData, Serializable {
                         + ", numBytesOutForMeter=" + numBytesOutForMeter.getCount()
                         + ", numRecordsOutPerSecond=" + numRecordsOutPerSecond.getRate()
                         + ", numBytesOutPerSecond=" + numBytesOutPerSecond.getRate()
+                        + ", serializeTimeLag=" + serializeTimeLag.getValue()
                         + '}';
             default:
                 return "SinkMetricData{"
