@@ -527,7 +527,7 @@ public class DebeziumSourceFunction<T> extends RichSourceFunction<T>
             // get the start time of the currently completed checkpoint
             Long snapShotStartTimeById = checkpointStartTimeMap.remove(checkpointId);
             if (snapShotStartTimeById != null) {
-                sourceExactlyMetric.incNumCompletedCheckpoints();
+                sourceExactlyMetric.incNumCompletedSnapshots();
                 sourceExactlyMetric.recordSnapshotToCheckpointDelay(System.currentTimeMillis() - snapShotStartTimeById);
             }
         } catch (Exception e) {

@@ -375,7 +375,7 @@ public class SourceExactlyMetric implements MetricData, Serializable, SourceMetr
         }
     }
 
-    public void incNumCompletedCheckpoints() {
+    public void incNumCompletedSnapshots() {
         if (numCompletedSnapshots != null) {
             numCompletedSnapshots.inc();
         }
