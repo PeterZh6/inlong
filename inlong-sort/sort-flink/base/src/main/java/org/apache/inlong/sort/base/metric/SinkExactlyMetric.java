@@ -305,7 +305,6 @@ public class SinkExactlyMetric implements MetricData, Serializable {
         }
     }
 
-
     public void flushAudit() {
         if (auditReporter != null) {
             auditReporter.flush(lastCheckpointId);
