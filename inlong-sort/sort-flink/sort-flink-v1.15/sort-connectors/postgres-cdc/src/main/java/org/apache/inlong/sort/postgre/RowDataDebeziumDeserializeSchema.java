@@ -17,9 +17,6 @@
 
 package org.apache.inlong.sort.postgre;
 
-import org.apache.inlong.sort.base.metric.MetricsCollector;
-import org.apache.inlong.sort.base.metric.SourceExactlyMetric;
-
 import com.ververica.cdc.debezium.table.AppendMetadataCollector;
 import com.ververica.cdc.debezium.table.DebeziumChangelogMode;
 import com.ververica.cdc.debezium.table.DeserializationRuntimeConverter;
@@ -46,6 +43,8 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.Collector;
+import org.apache.inlong.sort.base.metric.MetricsCollector;
+import org.apache.inlong.sort.base.metric.SourceExactlyMetric;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
@@ -136,7 +135,7 @@ public final class RowDataDebeziumDeserializeSchema implements DebeziumDeseriali
 
     @Override
     public void deserialize(SourceRecord record, Collector<RowData> out) throws Exception {
-        long deserializeStartTime = System.nanoTime();
+        long deserializeStartTime = System.currentTimeMillis();
         try {
             doDeserialize(record, out, deserializeStartTime);
         } catch (Exception e) {
@@ -186,7 +185,7 @@ public final class RowDataDebeziumDeserializeSchema implements DebeziumDeseriali
         }
         if (sourceExactlyMetric != null) {
             sourceExactlyMetric.incNumDeserializeSuccess();
-            sourceExactlyMetric.recordDeserializeDelay(System.nanoTime() - deserializeStartTime);
+            sourceExactlyMetric.recordDeserializeDelay(System.currentTimeMillis() - deserializeStartTime);
         }
     }
 
