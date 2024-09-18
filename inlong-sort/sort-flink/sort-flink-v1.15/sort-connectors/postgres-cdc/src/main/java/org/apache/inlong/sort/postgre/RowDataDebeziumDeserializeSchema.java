@@ -136,9 +136,9 @@ public final class RowDataDebeziumDeserializeSchema implements DebeziumDeseriali
 
     @Override
     public void deserialize(SourceRecord record, Collector<RowData> out) throws Exception {
-        long deseializeStartTime = System.currentTimeMillis();
+        long deserializeStartTime = System.nanoTime();
         try {
-            doDeserialize(record, out, deseializeStartTime);
+            doDeserialize(record, out, deserializeStartTime);
         } catch (Exception e) {
             if (sourceExactlyMetric != null) {
                 sourceExactlyMetric.incNumDeserializeError();
@@ -186,7 +186,7 @@ public final class RowDataDebeziumDeserializeSchema implements DebeziumDeseriali
         }
         if (sourceExactlyMetric != null) {
             sourceExactlyMetric.incNumDeserializeSuccess();
-            sourceExactlyMetric.recordDeserializeDelay(System.currentTimeMillis() - deserializeStartTime);
+            sourceExactlyMetric.recordDeserializeDelay(System.nanoTime() - deserializeStartTime);
         }
     }
 
