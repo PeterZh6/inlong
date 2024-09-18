@@ -342,8 +342,12 @@ public class DebeziumSourceFunction<T> extends RichSourceFunction<T>
                     .updateCurrentCheckpointId(functionSnapshotContext.getCheckpointId());
         }
         // record the start time of each checkpoint
-        long checkpointId = functionSnapshotContext.getCheckpointId();
-        checkpointStartTimeMap.put(checkpointId, System.currentTimeMillis());
+        Long checkpointId = functionSnapshotContext.getCheckpointId();
+        if (checkpointStartTimeMap != null) {
+            checkpointStartTimeMap.put(checkpointId, System.currentTimeMillis());
+        } else {
+            LOG.error("checkpointStartTimeMap is null, can't record the start time of checkpoint");
+        }
         sourceExactlyMetric.incNumSnapshotCreate();
     }
 
@@ -525,10 +529,13 @@ public class DebeziumSourceFunction<T> extends RichSourceFunction<T>
                 schema.updateLastCheckpointId(checkpointId);
             }
             // get the start time of the currently completed checkpoint
-            Long snapShotStartTimeById = checkpointStartTimeMap.remove(checkpointId);
-            if (snapShotStartTimeById != null) {
-                sourceExactlyMetric.incNumCompletedSnapshots();
-                sourceExactlyMetric.recordSnapshotToCheckpointDelay(System.currentTimeMillis() - snapShotStartTimeById);
+            if (checkpointStartTimeMap != null) {
+                Long snapShotStartTimeById = checkpointStartTimeMap.remove(checkpointId);
+                if (snapShotStartTimeById != null) {
+                    sourceExactlyMetric.incNumCompletedSnapshots();
+                    sourceExactlyMetric
+                            .recordSnapshotToCheckpointDelay(System.currentTimeMillis() - snapShotStartTimeById);
+                }
             }
         } catch (Exception e) {
             // ignore exception if we are no longer running
