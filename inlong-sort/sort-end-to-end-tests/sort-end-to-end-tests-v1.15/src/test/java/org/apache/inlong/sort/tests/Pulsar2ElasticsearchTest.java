@@ -1,10 +1,27 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.inlong.sort.tests;
 
-import org.apache.flink.util.ConfigurationException;
-import org.apache.http.HttpHost;
-import org.apache.http.util.EntityUtils;
 import org.apache.inlong.sort.tests.utils.FlinkContainerTestEnvJRE8;
 import org.apache.inlong.sort.tests.utils.TestUtils;
+
+import org.apache.http.HttpHost;
+import org.apache.http.util.EntityUtils;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.Schema;
@@ -47,7 +64,8 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
 
     static {
         try {
-            URI pulsarSqlFile = Objects.requireNonNull(Pulsar2ElasticsearchTest.class.getResource("/flinkSql/pulsar_test.sql")).toURI();
+            URI pulsarSqlFile = Objects
+                    .requireNonNull(Pulsar2ElasticsearchTest.class.getResource("/flinkSql/pulsar_test.sql")).toURI();
             sqlFile = Paths.get(pulsarSqlFile).toString();
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
@@ -61,10 +79,11 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
             .withLogConsumer(new Slf4jLogConsumer(PULSAR_LOG));
 
     @ClassRule
-    public static final ElasticsearchContainer ELASTICSEARCH = new ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:7.10.1"))
-            .withNetwork(NETWORK)
-            .withNetworkAliases("elasticsearch")
-            .withLogConsumer(new Slf4jLogConsumer(ELASTICSEARCH_LOG));
+    public static final ElasticsearchContainer ELASTICSEARCH =
+            new ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:7.10.1"))
+                    .withNetwork(NETWORK)
+                    .withNetworkAliases("elasticsearch")
+                    .withLogConsumer(new Slf4jLogConsumer(ELASTICSEARCH_LOG));
 
     @Before
     public void setup() {
@@ -75,7 +94,8 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
 
     private void initializePulsarTopic() {
         try {
-            Container.ExecResult result = PULSAR.execInContainer("bin/pulsar-admin", "topics", "create", "persistent://public/default/test-topic");
+            Container.ExecResult result = PULSAR.execInContainer("bin/pulsar-admin", "topics", "create",
+                    "persistent://public/default/test-topic");
             LOG.info("Create Pulsar topic: test-topic, std: {}", result.getStdout());
             if (result.getExitCode() != 0) {
                 throw new RuntimeException("Init Pulsar topic failed. Exit code:" + result.getExitCode());
@@ -89,7 +109,8 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
         try (RestClient restClient = RestClient.builder(new HttpHost("localhost", 9200, "http")).build()) {
             Request request = new Request("PUT", "/test-index");
             Response response = restClient.performRequest(request);
-            LOG.info("Create Elasticsearch index: {}, status: {}", "test-index", response.getStatusLine().getStatusCode());
+            LOG.info("Create Elasticsearch index: {}, status: {}", "test-index",
+                    response.getStatusLine().getStatusCode());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
