@@ -292,9 +292,9 @@
                         </artifactItem>
                         <artifactItem>
                             <groupId>org.apache.inlong</groupId>
-                            <artifactId>sort-connector-elasticsearch-v1.15</artifactId>
+                            <artifactId>sort-connector-elasticsearch-base-v1.15</artifactId>
                             <version>${project.version}</version>
-                            <destFileName>sort-connector-elasticsearch.jar</destFileName>
+                            <destFileName>sort-connector-elasticsearch-base.jar</destFileName>
                             <type>jar</type>
                             <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
                         </artifactItem>

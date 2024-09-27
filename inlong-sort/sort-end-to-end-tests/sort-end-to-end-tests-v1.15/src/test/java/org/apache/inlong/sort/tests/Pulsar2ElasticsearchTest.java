@@ -58,7 +58,7 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
     public static final Logger ELASTICSEARCH_LOG = LoggerFactory.getLogger(ElasticsearchContainer.class);
 
     private static final Path pulsarJar = TestUtils.getResource("sort-connector-pulsar.jar");
-    private static final Path elasticsearchJar = TestUtils.getResource("sort-connector-elasticsearch.jar");
+    private static final Path elasticsearchJar = TestUtils.getResource("sort-connector-elasticsearch-base.jar");
 
     private static final String sqlFile;
 
