@@ -183,6 +183,12 @@
             <artifactId>elasticsearch-rest-client</artifactId>
             <version>7.10.2</version>
         </dependency>
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <version>8.9.0</version> <!-- 使用最新版本或与你的 Elasticsearch 版本兼容的版本 -->
+        </dependency>
+
 
     </dependencies>
 
