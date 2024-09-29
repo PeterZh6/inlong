@@ -26,7 +26,9 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
+import org.apache.http.Header;
 import org.apache.http.HttpHost;
+import org.apache.http.message.BasicHeader;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.Schema;
@@ -82,7 +84,7 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
 
     @ClassRule
     public static final ElasticsearchContainer ELASTICSEARCH =
-            new ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:7.9.3"))
+            new ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:7.17.24"))
                     .withExposedPorts(9200, 9300)
                     .withNetwork(NETWORK)
                     .withNetworkAliases("elasticsearch")
@@ -111,7 +113,10 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
     private void initializeElasticsearchIndex() {
         // 使用 Elasticsearch 客户端创建索引
         try (RestClient restClient =
-                RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
+                RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http"))
+                        .setDefaultHeaders(new Header[]{
+                                new BasicHeader("Content-type", "application/json")
+                        }).build()) {
             RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
             ElasticsearchClient client = new ElasticsearchClient(transport);
 
