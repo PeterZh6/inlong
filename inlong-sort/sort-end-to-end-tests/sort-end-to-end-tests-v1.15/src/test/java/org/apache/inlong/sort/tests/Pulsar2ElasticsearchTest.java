@@ -20,6 +20,7 @@ package org.apache.inlong.sort.tests;
 import org.apache.inlong.sort.tests.utils.FlinkContainerTestEnvJRE8;
 import org.apache.inlong.sort.tests.utils.TestUtils;
 
+import org.apache.http.HttpHost;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.Schema;
@@ -28,6 +29,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,6 +48,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Objects;
 
 public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
@@ -78,8 +81,8 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
 
     @ClassRule
     public static final ElasticsearchContainer ELASTICSEARCH =
-            new ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:7.10.1"))
-                    .withExposedPorts(9200)
+            new ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:7.9.3"))
+                    .withExposedPorts(9200, 9300)
                     .withNetwork(NETWORK)
                     .withNetworkAliases("elasticsearch")
                     .withLogConsumer(new Slf4jLogConsumer(ELASTICSEARCH_LOG));
@@ -106,9 +109,8 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
 
     private void initializeElasticsearchIndex() {
         // 使用 Elasticsearch 客户端创建索引
-        try (RestHighLevelClient client = new RestHighLevelClient(RestClient.builder(
-                new org.elasticsearch.client.RestClientBuilder.HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200),
-                        "http")))) {
+        try (RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")))) {
             client.indices().create(new CreateIndexRequest("test-index"), RequestOptions.DEFAULT);
             LOG.info("Created Elasticsearch index: test-index");
         } catch (IOException e) {
@@ -142,9 +144,8 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
         }
 
         // 查询 Elasticsearch 数据
-        try (RestHighLevelClient client = new RestHighLevelClient(RestClient.builder(
-                new org.elasticsearch.client.RestClientBuilder.HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200),
-                        "http")))) {
+        try (RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")))) {
             SearchRequest searchRequest = new SearchRequest("test-index");
             searchRequest.source().query(QueryBuilders.matchAllQuery());
             SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
