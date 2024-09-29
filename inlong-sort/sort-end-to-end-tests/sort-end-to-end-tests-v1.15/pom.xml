@@ -175,6 +175,7 @@
             <groupId>org.apache.pulsar</groupId>
             <artifactId>pulsar-client-api</artifactId>
             <version>3.0.2</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Elasticsearch client dependencies -->
@@ -182,13 +183,14 @@
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-client</artifactId>
             <version>7.10.2</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>
-            <version>8.9.0</version> <!-- 使用最新版本或与你的 Elasticsearch 版本兼容的版本 -->
+            <version>8.9.0</version>
+            <scope>test</scope>
         </dependency>
-
 
     </dependencies>
 

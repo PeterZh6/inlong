@@ -17,6 +17,9 @@
 
 package org.apache.inlong.sort.tests;
 
+import org.apache.inlong.sort.tests.utils.FlinkContainerTestEnvJRE8;
+import org.apache.inlong.sort.tests.utils.TestUtils;
+
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -24,8 +27,6 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import org.apache.http.HttpHost;
-import org.apache.inlong.sort.tests.utils.FlinkContainerTestEnvJRE8;
-import org.apache.inlong.sort.tests.utils.TestUtils;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.Schema;
@@ -109,7 +110,8 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
 
     private void initializeElasticsearchIndex() {
         // 使用 Elasticsearch 客户端创建索引
-        try (RestClient restClient = RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
+        try (RestClient restClient =
+                RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
             RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
             ElasticsearchClient client = new ElasticsearchClient(transport);
 
@@ -147,12 +149,14 @@ public class Pulsar2ElasticsearchTest extends FlinkContainerTestEnvJRE8 {
         }
 
         // 查询 Elasticsearch 数据
-        try (RestClient restClient = RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
+        try (RestClient restClient =
+                RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
             RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
             ElasticsearchClient client = new ElasticsearchClient(transport);
 
             // Search Request
-            SearchRequest searchRequest = new SearchRequest.Builder().index("test-index").query(q -> q.matchAll(m -> m)).build();
+            SearchRequest searchRequest =
+                    new SearchRequest.Builder().index("test-index").query(q -> q.matchAll(m -> m)).build();
             SearchResponse<Object> searchResponse = client.search(searchRequest, Object.class);
 
             List<Hit<Object>> hits = searchResponse.hits().hits();
