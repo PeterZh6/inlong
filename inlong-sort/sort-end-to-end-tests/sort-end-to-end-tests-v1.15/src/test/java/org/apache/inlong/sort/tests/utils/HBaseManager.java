@@ -37,17 +37,17 @@ public class HBaseManager {
     public static final String INTER_CONTAINER_HBASE_ALIAS = "hbase";
     private static final String NEW_HBASE_REPOSITORY = "inlong-hbase";
     private static final String NEW_HBASE_TAG = "latest";
-    private static final String HBASE_IMAGE_NAME = "harisekhon/hbase:2.4.11";
+    private static final String HBASE_IMAGE_NAME = "harisekhon/hbase:latest";
     private static final String DEFAULT_COLUMN_FAMILY = "cf1";
     public static final Logger HBASE_LOG = LoggerFactory.getLogger(HBaseContainer.class);
 
     static {
         GenericContainer oldHBase = new GenericContainer(HBASE_IMAGE_NAME);
         Startables.deepStart(Stream.of(oldHBase)).join();
-        oldHBase.copyFileToContainer(MountableFile.forClasspathResource("/docker/hbase/start_hbase.sh"),
+        oldHBase.copyFileToContainer(MountableFile.forClasspathResource("/docker/hbase/start-hbase.sh"),
                 "/data/hbase/");
         try {
-            oldHBase.execInContainer("chmod", "+x", "/data/hbase/start_hbase.sh");
+            oldHBase.execInContainer("chmod", "+x", "/data/hbase/start-hbase.sh");
         } catch (Exception e) {
             e.printStackTrace();
         }
