@@ -485,7 +485,8 @@ public class StarRocksSinkManager implements Serializable {
                             metricData.outputMetrics(flushData.getDatabase(), flushData.getTable(),
                                     flushData.getBatchCount(), flushData.getBatchSize());
                         } else {
-                            metricData.invoke(flushData.getBatchCount(), flushData.getBatchSize());
+                            metricData.invoke(flushData.getBatchCount(), flushData.getBatchSize(),
+                                    System.currentTimeMillis());
                         }
                     }
                 }

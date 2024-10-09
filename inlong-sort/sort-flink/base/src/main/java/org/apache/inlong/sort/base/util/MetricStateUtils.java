@@ -19,7 +19,7 @@ package org.apache.inlong.sort.base.util;
 
 import org.apache.inlong.sort.base.enums.ReadPhase;
 import org.apache.inlong.sort.base.metric.MetricState;
-import org.apache.inlong.sort.base.metric.SinkMetricData;
+import org.apache.inlong.sort.base.metric.SinkExactlyMetric;
 import org.apache.inlong.sort.base.metric.SourceMetricData;
 import org.apache.inlong.sort.base.metric.phase.ReadPhaseMetricData;
 import org.apache.inlong.sort.base.metric.sub.SinkSubMetricData;
@@ -208,52 +208,52 @@ public class MetricStateUtils {
     }
 
     /**
-     * Snapshot metric state data for {@link SinkMetricData}
+     * Snapshot metric state data for {@link org.apache.inlong.sort.base.metric.SinkExactlyMetric}
      * @param metricStateListState state data list
-     * @param sinkMetricData {@link SinkMetricData} A collection class for handling metrics
+     * @param sinkExactlyMetric {@link SinkExactlyMetric} A collection class for handling metrics
      * @param subtaskIndex subtask index
      * @throws Exception throw exception when add metric state
      */
     public static void snapshotMetricStateForSinkMetricData(ListState<MetricState> metricStateListState,
-            SinkMetricData sinkMetricData, Integer subtaskIndex)
+            SinkExactlyMetric sinkExactlyMetric, Integer subtaskIndex)
             throws Exception {
         LOGGER.info("snapshotMetricStateForSinkMetricData:{}, sinkMetricData:{}, subtaskIndex:{}",
-                metricStateListState, sinkMetricData, subtaskIndex);
+                metricStateListState, sinkExactlyMetric, subtaskIndex);
         metricStateListState.clear();
         Map<String, Long> metricDataMap = new HashMap<>();
-        metricDataMap.put(NUM_RECORDS_OUT, sinkMetricData.getNumRecordsOut().getCount());
-        metricDataMap.put(NUM_BYTES_OUT, sinkMetricData.getNumBytesOut().getCount());
-        if (sinkMetricData.getDirtyRecordsOut() != null) {
-            metricDataMap.put(DIRTY_RECORDS_OUT, sinkMetricData.getDirtyRecordsOut().getCount());
+        metricDataMap.put(NUM_RECORDS_OUT, sinkExactlyMetric.getNumRecordsOut().getCount());
+        metricDataMap.put(NUM_BYTES_OUT, sinkExactlyMetric.getNumBytesOut().getCount());
+        if (sinkExactlyMetric.getDirtyRecordsOut() != null) {
+            metricDataMap.put(DIRTY_RECORDS_OUT, sinkExactlyMetric.getDirtyRecordsOut().getCount());
         }
-        if (sinkMetricData.getDirtyBytesOut() != null) {
-            metricDataMap.put(DIRTY_BYTES_OUT, sinkMetricData.getDirtyBytesOut().getCount());
+        if (sinkExactlyMetric.getDirtyBytesOut() != null) {
+            metricDataMap.put(DIRTY_BYTES_OUT, sinkExactlyMetric.getDirtyBytesOut().getCount());
         }
         MetricState metricState = new MetricState(subtaskIndex, metricDataMap);
 
         // snapshot sub metric data state
-        snapshotMetricStateForSinkSubMetricData(sinkMetricData, subtaskIndex, metricState);
+        snapshotMetricStateForSinkSubMetricData(sinkExactlyMetric, subtaskIndex, metricState);
         metricStateListState.add(metricState);
     }
 
     /**
-     * Snapshot sub metric state data for {@link SinkSubMetricData}
-     * @param sinkMetricData {@link SinkMetricData} A collection class for handling metrics
+     * Snapshot sub metric state data for {@link SinkExactlyMetric}
+     * @param sinkExactlyMetric {@link SinkExactlyMetric} A collection class for handling metrics
      * @param subtaskIndex subtask index
      * @param metricState state of source metric data
      */
-    private static void snapshotMetricStateForSinkSubMetricData(SinkMetricData sinkMetricData,
+    private static void snapshotMetricStateForSinkSubMetricData(SinkExactlyMetric sinkExactlyMetric,
             Integer subtaskIndex, MetricState metricState) {
-        if (!(sinkMetricData instanceof SinkSubMetricData)) {
+        if (!(sinkExactlyMetric instanceof SinkSubMetricData)) {
             return;
         }
-        SinkSubMetricData sinkSubMetricData = (SinkSubMetricData) sinkMetricData;
+        SinkSubMetricData sinkSubMetricData = (SinkSubMetricData) sinkExactlyMetric;
 
-        Map<String, SinkMetricData> subSinkMetricMap = sinkSubMetricData.getSubSinkMetricMap();
+        Map<String, SinkExactlyMetric> subSinkMetricMap = sinkSubMetricData.getSubSinkMetricMap();
         if (subSinkMetricMap != null && !subSinkMetricMap.isEmpty()) {
             Map<String, MetricState> subMetricStateMap = new HashMap<>();
-            Set<Entry<String, SinkMetricData>> entries = subSinkMetricMap.entrySet();
-            for (Entry<String, SinkMetricData> entry : entries) {
+            Set<Entry<String, SinkExactlyMetric>> entries = subSinkMetricMap.entrySet();
+            for (Entry<String, SinkExactlyMetric> entry : entries) {
                 Map<String, Long> subMetricDataMap = new HashMap<>();
                 subMetricDataMap.put(NUM_RECORDS_OUT, entry.getValue().getNumRecordsOut().getCount());
                 subMetricDataMap.put(NUM_BYTES_OUT, entry.getValue().getNumBytesOut().getCount());

@@ -21,7 +21,7 @@ import org.apache.inlong.sort.base.Constants;
 import org.apache.inlong.sort.base.metric.MetricOption;
 import org.apache.inlong.sort.base.metric.MetricOption.RegisteredMetric;
 import org.apache.inlong.sort.base.metric.MetricState;
-import org.apache.inlong.sort.base.metric.SinkMetricData;
+import org.apache.inlong.sort.base.metric.SinkExactlyMetric;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
@@ -44,14 +44,14 @@ import static org.apache.inlong.sort.base.util.CalculateObjectSizeUtils.getDataS
 /**
  * A collection class for handling sub metrics of table schema type
  */
-public class SinkTableMetricData extends SinkMetricData implements SinkSubMetricData {
+public class SinkTableMetricData extends SinkExactlyMetric implements SinkSubMetricData {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(SinkTableMetricData.class);
 
     /**
      * The sub sink metric data container of sink metric data
      */
-    private final Map<String, SinkMetricData> subSinkMetricMap = Maps.newHashMap();
+    private final Map<String, SinkExactlyMetric> subSinkMetricMap = Maps.newHashMap();
 
     public SinkTableMetricData(MetricOption option, MetricGroup metricGroup) {
         super(option, metricGroup);
@@ -75,7 +75,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
         for (Entry<String, MetricState> subMetricStateEntry : subMetricStateMap.entrySet()) {
             String[] schemaInfoArray = parseSchemaIdentify(subMetricStateEntry.getKey());
             final MetricState subMetricState = subMetricStateEntry.getValue();
-            SinkMetricData subSinkMetricData = buildSubSinkMetricData(schemaInfoArray, subMetricState, this);
+            SinkExactlyMetric subSinkMetricData = buildSubSinkMetricData(schemaInfoArray, subMetricState, this);
             subSinkMetricMap.put(subMetricStateEntry.getKey(), subSinkMetricData);
         }
         LOGGER.info("register subMetricsGroup from metricState,sub metric map size:{}", subSinkMetricMap.size());
@@ -85,11 +85,11 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
      * build sub sink metric data
      *
      * @param schemaInfoArray sink record schema info
-     * @param sinkMetricData sink metric data
+     * @param sinkExactlyMetric sink metric data
      * @return sub sink metric data
      */
-    private SinkMetricData buildSubSinkMetricData(String[] schemaInfoArray, SinkMetricData sinkMetricData) {
-        return buildSubSinkMetricData(schemaInfoArray, null, sinkMetricData);
+    private SinkExactlyMetric buildSubSinkMetricData(String[] schemaInfoArray, SinkExactlyMetric sinkExactlyMetric) {
+        return buildSubSinkMetricData(schemaInfoArray, null, sinkExactlyMetric);
     }
 
     /**
@@ -97,16 +97,16 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
      *
      * @param schemaInfoArray the schema info array of record
      * @param subMetricState sub metric state
-     * @param sinkMetricData sink metric data
+     * @param sinkExactlyMetric sink metric data
      * @return sub sink metric data
      */
-    private SinkMetricData buildSubSinkMetricData(String[] schemaInfoArray, MetricState subMetricState,
-            SinkMetricData sinkMetricData) {
-        if (sinkMetricData == null || schemaInfoArray == null) {
+    private SinkExactlyMetric buildSubSinkMetricData(String[] schemaInfoArray, MetricState subMetricState,
+            SinkExactlyMetric sinkExactlyMetric) {
+        if (sinkExactlyMetric == null || schemaInfoArray == null) {
             return null;
         }
         // build sub sink metric data
-        Map<String, String> labels = sinkMetricData.getLabels();
+        Map<String, String> labels = sinkExactlyMetric.getLabels();
         String metricGroupLabels = labels.entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(Collectors.joining(DELIMITER));
         StringBuilder labelBuilder = new StringBuilder(metricGroupLabels);
@@ -125,7 +125,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
                 .withInitDirtyRecords(subMetricState != null ? subMetricState.getMetricValue(DIRTY_RECORDS_OUT) : 0L)
                 .withInitDirtyBytes(subMetricState != null ? subMetricState.getMetricValue(DIRTY_BYTES_OUT) : 0L)
                 .withInlongLabels(labelBuilder.toString()).withRegisterMetric(RegisteredMetric.ALL).build();
-        return new SinkTableMetricData(metricOption, sinkMetricData.getMetricGroup());
+        return new SinkTableMetricData(metricOption, sinkExactlyMetric.getMetricGroup());
     }
 
     /**
@@ -182,11 +182,11 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
      */
     public void outputMetrics(String database, String schema, String table, long rowCount, long rowSize) {
         if (StringUtils.isBlank(database) || StringUtils.isBlank(table)) {
-            invoke(rowCount, rowSize);
+            invoke(rowCount, rowSize, System.currentTimeMillis());
             return;
         }
         String identify = buildSchemaIdentify(database, schema, table);
-        SinkMetricData subSinkMetricData;
+        SinkExactlyMetric subSinkMetricData;
         if (subSinkMetricMap.containsKey(identify)) {
             subSinkMetricData = subSinkMetricMap.get(identify);
         } else {
@@ -194,8 +194,8 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
             subSinkMetricMap.put(identify, subSinkMetricData);
         }
         // sink metric and sub sink metric output metrics
-        this.invoke(rowCount, rowSize);
-        subSinkMetricData.invoke(rowCount, rowSize);
+        this.invoke(rowCount, rowSize, System.currentTimeMillis());
+        subSinkMetricData.invoke(rowCount, rowSize, System.currentTimeMillis());
     }
 
     /**
@@ -209,11 +209,11 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
     public void outputMetrics(String database, String table, long rowCount,
             long rowSize) {
         if (StringUtils.isBlank(database) || StringUtils.isBlank(table)) {
-            invoke(rowCount, rowSize);
+            invoke(rowCount, rowSize, System.currentTimeMillis());
             return;
         }
         String identify = buildSchemaIdentify(database, null, table);
-        SinkMetricData subSinkMetricData;
+        SinkExactlyMetric subSinkMetricData;
         if (subSinkMetricMap.containsKey(identify)) {
             subSinkMetricData = subSinkMetricMap.get(identify);
         } else {
@@ -221,8 +221,8 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
             subSinkMetricMap.put(identify, subSinkMetricData);
         }
         // sink metric and sub sink metric output metrics
-        this.invoke(rowCount, rowSize);
-        subSinkMetricData.invoke(rowCount, rowSize);
+        this.invoke(rowCount, rowSize, System.currentTimeMillis());
+        subSinkMetricData.invoke(rowCount, rowSize, System.currentTimeMillis());
     }
 
     /**
@@ -234,10 +234,10 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
      */
     public void outputMetrics(String index, long rowCount, long rowSize) {
         if (StringUtils.isBlank(index)) {
-            invoke(rowCount, rowSize);
+            invoke(rowCount, rowSize, System.currentTimeMillis());
             return;
         }
-        SinkMetricData subSinkMetricData;
+        SinkExactlyMetric subSinkMetricData;
         if (subSinkMetricMap.containsKey(index)) {
             subSinkMetricData = subSinkMetricMap.get(index);
         } else {
@@ -245,8 +245,8 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
             subSinkMetricMap.put(index, subSinkMetricData);
         }
         // sink metric and sub sink metric output metrics
-        this.invoke(rowCount, rowSize);
-        subSinkMetricData.invoke(rowCount, rowSize);
+        this.invoke(rowCount, rowSize, System.currentTimeMillis());
+        subSinkMetricData.invoke(rowCount, rowSize, System.currentTimeMillis());
     }
 
     /**
@@ -264,7 +264,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
             return;
         }
         String identify = buildSchemaIdentify(database, null, table);
-        SinkMetricData subSinkMetricData;
+        SinkExactlyMetric subSinkMetricData;
         if (subSinkMetricMap.containsKey(identify)) {
             subSinkMetricData = subSinkMetricMap.get(identify);
         } else {
@@ -292,7 +292,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
             return;
         }
         String identify = buildSchemaIdentify(database, schema, table);
-        SinkMetricData subSinkMetricData;
+        SinkExactlyMetric subSinkMetricData;
         if (subSinkMetricMap.containsKey(identify)) {
             subSinkMetricData = subSinkMetricMap.get(identify);
         } else {
@@ -306,7 +306,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
 
     public void outputMetricsWithEstimate(Object data) {
         long size = data.toString().getBytes(StandardCharsets.UTF_8).length;
-        invoke(1, size);
+        invoke(1, size, System.currentTimeMillis());
     }
 
     /**
@@ -324,7 +324,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
             return;
         }
         String identify = buildSchemaIdentify(database, schema, table);
-        SinkMetricData subSinkMetricData;
+        SinkExactlyMetric subSinkMetricData;
         if (subSinkMetricMap.containsKey(identify)) {
             subSinkMetricData = subSinkMetricMap.get(identify);
         } else {
@@ -350,7 +350,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
             return;
         }
         String identify = buildSchemaIdentify(database, null, table);
-        SinkMetricData subSinkMetricData;
+        SinkExactlyMetric subSinkMetricData;
         if (subSinkMetricMap.containsKey(identify)) {
             subSinkMetricData = subSinkMetricMap.get(identify);
         } else {
@@ -374,7 +374,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
             invokeDirty(rowCount, rowSize);
             return;
         }
-        SinkMetricData subSinkMetricData;
+        SinkExactlyMetric subSinkMetricData;
         if (subSinkMetricMap.containsKey(index)) {
             subSinkMetricData = subSinkMetricMap.get(index);
         } else {
@@ -415,7 +415,7 @@ public class SinkTableMetricData extends SinkMetricData implements SinkSubMetric
     }
 
     @Override
-    public Map<String, SinkMetricData> getSubSinkMetricMap() {
+    public Map<String, SinkExactlyMetric> getSubSinkMetricMap() {
         return this.subSinkMetricMap;
     }
 

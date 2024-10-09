@@ -19,7 +19,7 @@ package org.apache.inlong.sort.redis.sink;
 
 import org.apache.inlong.sort.base.metric.MetricOption;
 import org.apache.inlong.sort.base.metric.MetricState;
-import org.apache.inlong.sort.base.metric.SinkMetricData;
+import org.apache.inlong.sort.base.metric.SinkExactlyMetric;
 import org.apache.inlong.sort.base.util.MetricStateUtils;
 import org.apache.inlong.sort.redis.common.container.InlongRedisCommandsContainer;
 import org.apache.inlong.sort.redis.common.container.RedisCommandsContainerBuilder;
@@ -27,6 +27,7 @@ import org.apache.inlong.sort.redis.common.schema.StateEncoder;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.flink.api.common.serialization.SerializationSchema;
+import org.apache.flink.api.common.state.CheckpointListener;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -45,11 +46,17 @@ import javax.annotation.concurrent.GuardedBy;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
-import static org.apache.inlong.sort.base.Constants.*;
+import static org.apache.inlong.sort.base.Constants.DIRTY_BYTES_OUT;
+import static org.apache.inlong.sort.base.Constants.DIRTY_RECORDS_OUT;
+import static org.apache.inlong.sort.base.Constants.INLONG_METRIC_STATE_NAME;
+import static org.apache.inlong.sort.base.Constants.NUM_BYTES_OUT;
+import static org.apache.inlong.sort.base.Constants.NUM_RECORDS_OUT;
 
 /**
  * The Flink Redis Producer.
@@ -58,7 +65,8 @@ public abstract class AbstractRedisSinkFunction<OUT>
         extends
             RichSinkFunction<RowData>
         implements
-            CheckpointedFunction {
+            CheckpointedFunction,
+            CheckpointListener {
 
     private static final long serialVersionUID = 1L;
 
@@ -115,7 +123,10 @@ public abstract class AbstractRedisSinkFunction<OUT>
     private final String inLongMetric;
     private transient MetricState metricState;
     private transient ListState<MetricState> metricStateListState;
-    private SinkMetricData sinkMetricData;
+    private transient SinkExactlyMetric sinkExactlyMetric;
+
+    /** The map to store the start time of each checkpoint. */
+    private transient Map<Long, Long> checkpointStartTimeMap;
 
     public AbstractRedisSinkFunction(
             TypeInformation<OUT> outputType,
@@ -178,8 +189,9 @@ public abstract class AbstractRedisSinkFunction<OUT>
                 .withRegisterMetric(MetricOption.RegisteredMetric.ALL)
                 .build();
         if (metricOption != null) {
-            sinkMetricData = new SinkMetricData(metricOption, getRuntimeContext().getMetricGroup());
+            sinkExactlyMetric = new SinkExactlyMetric(metricOption, getRuntimeContext().getMetricGroup());
         }
+        checkpointStartTimeMap = new HashMap<>();
     }
 
     @Override
@@ -208,23 +220,51 @@ public abstract class AbstractRedisSinkFunction<OUT>
 
     @Override
     public void snapshotState(FunctionSnapshotContext functionSnapshotContext) throws Exception {
+        if (sinkExactlyMetric != null) {
+            // record the start time of each checkpoint
+            checkpointStartTimeMap.put(functionSnapshotContext.getCheckpointId(), System.currentTimeMillis());
+        }
         LOG.info("redis start snapshotState, id: {}", functionSnapshotContext.getCheckpointId());
         synchronized (lock) {
             listState.clear();
             listState.addAll(rows);
         }
-        if (sinkMetricData != null && metricStateListState != null) {
-            MetricStateUtils.snapshotMetricStateForSinkMetricData(metricStateListState, sinkMetricData,
+        if (sinkExactlyMetric != null && metricStateListState != null) {
+            MetricStateUtils.snapshotMetricStateForSinkMetricData(metricStateListState, sinkExactlyMetric,
                     getRuntimeContext().getIndexOfThisSubtask());
         }
         LOG.info("redis end snapshotState, id: {}", functionSnapshotContext.getCheckpointId());
+        if (sinkExactlyMetric != null) {
+            sinkExactlyMetric.incNumSnapshotCreate();
+        }
+    }
+
+    /** let flink report the completion of checkpoint */
+    @Override
+    public void notifyCheckpointComplete(long checkpointId) {
+        if (sinkExactlyMetric != null) {
+            sinkExactlyMetric.incNumSnapshotComplete();
+            // get the start time of the currently completed checkpoint
+            Long snapShotStartTimeById = checkpointStartTimeMap.remove(checkpointId);
+            sinkExactlyMetric
+                    .recordSnapshotToCheckpointDelay(System.currentTimeMillis() - snapShotStartTimeById);
+        }
     }
 
     protected List<OUT> serialize(RowData in) {
         try {
-            return stateEncoder.serialize(in, serializationSchema);
+            long serializeStartTime = System.currentTimeMillis();
+            List<OUT> serializedData = stateEncoder.serialize(in, serializationSchema);
+            if (sinkExactlyMetric != null) {
+                sinkExactlyMetric.recordSerializeDelay(System.currentTimeMillis() - serializeStartTime);
+                sinkExactlyMetric.incNumSerializeSuccess();
+            }
+            return serializedData;
         } catch (Exception e) {
             LOG.error("Error when serializing data: " + in);
+            if (sinkExactlyMetric != null) {
+                sinkExactlyMetric.incNumSerializeError();
+            }
             throw new RuntimeException(e);
         }
     }
@@ -327,8 +367,8 @@ public abstract class AbstractRedisSinkFunction<OUT>
     }
 
     protected void sendMetrics(byte[] document) {
-        if (sinkMetricData != null) {
-            sinkMetricData.invoke(1, document.length);
+        if (sinkExactlyMetric != null) {
+            sinkExactlyMetric.invoke(1, document.length, System.currentTimeMillis());
         }
     }
 }

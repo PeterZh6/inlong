@@ -17,7 +17,7 @@
 
 package org.apache.inlong.sort.base.metric.sub;
 
-import org.apache.inlong.sort.base.metric.SinkMetricData;
+import org.apache.inlong.sort.base.metric.SinkExactlyMetric;
 
 import java.util.Map;
 
@@ -31,5 +31,5 @@ public interface SinkSubMetricData {
      *
      * @return The sub sink metric map
      */
-    Map<String, SinkMetricData> getSubSinkMetricMap();
+    Map<String, SinkExactlyMetric> getSubSinkMetricMap();
 }
