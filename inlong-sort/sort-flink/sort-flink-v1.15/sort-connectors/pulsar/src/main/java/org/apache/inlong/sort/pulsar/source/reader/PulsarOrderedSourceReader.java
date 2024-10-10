@@ -17,8 +17,6 @@
 
 package org.apache.inlong.sort.pulsar.source.reader;
 
-import org.apache.inlong.sort.pulsar.table.PulsarTableDeserializationSchema;
-
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.source.ReaderOutput;
@@ -34,6 +32,8 @@ import org.apache.flink.connector.pulsar.source.reader.split.PulsarOrderedPartit
 import org.apache.flink.connector.pulsar.source.split.PulsarPartitionSplit;
 import org.apache.flink.connector.pulsar.source.split.PulsarPartitionSplitState;
 import org.apache.flink.core.io.InputStatus;
+import org.apache.inlong.sort.base.metric.SourceExactlyMetric;
+import org.apache.inlong.sort.pulsar.table.PulsarTableDeserializationSchema;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.PulsarClient;
@@ -70,6 +70,10 @@ public class PulsarOrderedSourceReader<OUT> extends PulsarSourceReaderBase<OUT> 
     private final AtomicReference<Throwable> cursorCommitThrowable = new AtomicReference<>();
     private final PulsarDeserializationSchema<OUT> deserializationSchema;
     private ScheduledExecutorService cursorScheduler;
+    private SourceExactlyMetric sourceExactlyMetric;
+
+    /** The map to store the start time of each checkpoint. */
+    private transient Map<Long, Long> checkpointStartTimeMap;
 
     public PulsarOrderedSourceReader(
             FutureCompletingBlockingQueue<RecordsWithSplitIds<PulsarMessage<OUT>>> elementsQueue,
@@ -90,6 +94,10 @@ public class PulsarOrderedSourceReader<OUT> extends PulsarSourceReaderBase<OUT> 
         this.cursorsToCommit = Collections.synchronizedSortedMap(new TreeMap<>());
         this.cursorsOfFinishedSplits = new ConcurrentHashMap<>();
         this.deserializationSchema = deserializationSchema;
+        // get SourceExactlyMetric instance from deserializationSchema
+        if(deserializationSchema instanceof PulsarTableDeserializationSchema) {
+            this.sourceExactlyMetric = ((PulsarTableDeserializationSchema)deserializationSchema).getSourceExactlyMetric();
+        }
     }
 
     @Override
@@ -131,25 +139,41 @@ public class PulsarOrderedSourceReader<OUT> extends PulsarSourceReaderBase<OUT> 
 
     @Override
     public List<PulsarPartitionSplit> snapshotState(long checkpointId) {
-        if (deserializationSchema instanceof PulsarTableDeserializationSchema) {
-            ((PulsarTableDeserializationSchema) deserializationSchema).updateCurrentCheckpointId(checkpointId);
-        }
-        List<PulsarPartitionSplit> splits = super.snapshotState(checkpointId);
+        try {
+            // record the start time of each checkpoint
+            if (checkpointStartTimeMap != null) {
+                checkpointStartTimeMap.put(checkpointId, System.currentTimeMillis());
+            }
+            if (sourceExactlyMetric != null) {
+                sourceExactlyMetric.incNumSnapshotCreate();
+            }
 
-        // Perform a snapshot for these splits.
-        Map<TopicPartition, MessageId> cursors =
-                cursorsToCommit.computeIfAbsent(checkpointId, id -> new HashMap<>());
-        // Put the cursors of the active splits.
-        for (PulsarPartitionSplit split : splits) {
-            MessageId latestConsumedId = split.getLatestConsumedId();
-            if (latestConsumedId != null) {
-                cursors.put(split.getPartition(), latestConsumedId);
+            if (deserializationSchema instanceof PulsarTableDeserializationSchema) {
+                ((PulsarTableDeserializationSchema) deserializationSchema).updateCurrentCheckpointId(checkpointId);
+            }
+            List<PulsarPartitionSplit> splits = super.snapshotState(checkpointId);
+
+            // Perform a snapshot for these splits.
+            Map<TopicPartition, MessageId> cursors =
+                    cursorsToCommit.computeIfAbsent(checkpointId, id -> new HashMap<>());
+            // Put the cursors of the active splits.
+            for (PulsarPartitionSplit split : splits) {
+                MessageId latestConsumedId = split.getLatestConsumedId();
+                if (latestConsumedId != null) {
+                    cursors.put(split.getPartition(), latestConsumedId);
+                }
+            }
+            // Put cursors of all the finished splits.
+            cursors.putAll(cursorsOfFinishedSplits);
+
+            return splits;
+        } catch(Exception e) {
+            if(sourceExactlyMetric != null) {
+                sourceExactlyMetric.incNumSnapshotError();
+                throw e;
             }
         }
-        // Put cursors of all the finished splits.
-        cursors.putAll(cursorsOfFinishedSplits);
-
-        return splits;
+        return null;
     }
 
     @Override
@@ -169,6 +193,17 @@ public class PulsarOrderedSourceReader<OUT> extends PulsarSourceReaderBase<OUT> 
                         (PulsarTableDeserializationSchema) deserializationSchema;
                 pulsarTableDeserializationSchema.flushAudit();
                 pulsarTableDeserializationSchema.updateLastCheckpointId(checkpointId);
+            }
+            // get the start time of the currently completed checkpoint
+            if (checkpointStartTimeMap != null) {
+                Long snapShotStartTimeById = checkpointStartTimeMap.remove(checkpointId);
+                if (snapShotStartTimeById != null && sourceExactlyMetric != null) {
+                    sourceExactlyMetric.incNumSnapshotComplete();
+                    sourceExactlyMetric
+                            .recordSnapshotToCheckpointDelay(System.currentTimeMillis() - snapShotStartTimeById);
+                }
+            } else {
+                LOG.error("checkpointStartTimeMap is null, can't get the start time of checkpoint");
             }
         } catch (Exception e) {
             LOG.error("Failed to acknowledge cursors for checkpoint {}", checkpointId, e);
