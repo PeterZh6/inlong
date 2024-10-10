@@ -100,6 +100,7 @@ public class PulsarOrderedSourceReader<OUT> extends PulsarSourceReaderBase<OUT> 
             this.sourceExactlyMetric =
                     ((PulsarTableDeserializationSchema) deserializationSchema).getSourceExactlyMetric();
         }
+        this.checkpointStartTimeMap = new HashMap<>();
     }
 
     @Override
@@ -172,10 +173,9 @@ public class PulsarOrderedSourceReader<OUT> extends PulsarSourceReaderBase<OUT> 
         } catch (Exception e) {
             if (sourceExactlyMetric != null) {
                 sourceExactlyMetric.incNumSnapshotError();
-                throw e;
             }
+            throw e;
         }
-        return null;
     }
 
     @Override
