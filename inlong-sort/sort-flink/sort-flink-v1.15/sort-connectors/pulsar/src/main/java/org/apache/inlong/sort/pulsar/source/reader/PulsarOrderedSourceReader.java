@@ -17,6 +17,9 @@
 
 package org.apache.inlong.sort.pulsar.source.reader;
 
+import org.apache.inlong.sort.base.metric.SourceExactlyMetric;
+import org.apache.inlong.sort.pulsar.table.PulsarTableDeserializationSchema;
+
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.source.ReaderOutput;
@@ -32,8 +35,6 @@ import org.apache.flink.connector.pulsar.source.reader.split.PulsarOrderedPartit
 import org.apache.flink.connector.pulsar.source.split.PulsarPartitionSplit;
 import org.apache.flink.connector.pulsar.source.split.PulsarPartitionSplitState;
 import org.apache.flink.core.io.InputStatus;
-import org.apache.inlong.sort.base.metric.SourceExactlyMetric;
-import org.apache.inlong.sort.pulsar.table.PulsarTableDeserializationSchema;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.PulsarClient;
@@ -95,8 +96,9 @@ public class PulsarOrderedSourceReader<OUT> extends PulsarSourceReaderBase<OUT> 
         this.cursorsOfFinishedSplits = new ConcurrentHashMap<>();
         this.deserializationSchema = deserializationSchema;
         // get SourceExactlyMetric instance from deserializationSchema
-        if(deserializationSchema instanceof PulsarTableDeserializationSchema) {
-            this.sourceExactlyMetric = ((PulsarTableDeserializationSchema)deserializationSchema).getSourceExactlyMetric();
+        if (deserializationSchema instanceof PulsarTableDeserializationSchema) {
+            this.sourceExactlyMetric =
+                    ((PulsarTableDeserializationSchema) deserializationSchema).getSourceExactlyMetric();
         }
     }
 
@@ -167,8 +169,8 @@ public class PulsarOrderedSourceReader<OUT> extends PulsarSourceReaderBase<OUT> 
             cursors.putAll(cursorsOfFinishedSplits);
 
             return splits;
-        } catch(Exception e) {
-            if(sourceExactlyMetric != null) {
+        } catch (Exception e) {
+            if (sourceExactlyMetric != null) {
                 sourceExactlyMetric.incNumSnapshotError();
                 throw e;
             }
