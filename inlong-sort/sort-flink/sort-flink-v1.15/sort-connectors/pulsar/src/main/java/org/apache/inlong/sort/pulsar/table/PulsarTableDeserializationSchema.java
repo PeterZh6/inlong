@@ -96,6 +96,10 @@ public class PulsarTableDeserializationSchema implements PulsarDeserializationSc
             throws IOException {
         try {
             long deserializeStartTime = System.currentTimeMillis();
+            // increase the number of deserialize success first, if deserialize failed, decrease it
+            if (sourceExactlyMetric != null) {
+                sourceExactlyMetric.incNumDeserializeSuccess();
+            }
             // Get the key row data
             List<RowData> keyRowData = new ArrayList<>();
             if (keyDeserialization != null) {
@@ -119,11 +123,11 @@ public class PulsarTableDeserializationSchema implements PulsarDeserializationSc
                     message, keyRowData, valueRowData, metricsCollector);
             if (sourceExactlyMetric != null) {
                 sourceExactlyMetric.recordDeserializeDelay(System.currentTimeMillis() - deserializeStartTime);
-                sourceExactlyMetric.incNumDeserializeSuccess();
             }
         } catch (Exception e) {
             if (sourceExactlyMetric != null) {
                 sourceExactlyMetric.incNumDeserializeError();
+                sourceExactlyMetric.decNumDeserializeSuccess();
             }
             throw e;
         }
