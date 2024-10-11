@@ -86,7 +86,7 @@ public class PulsarTableDeserializationSchema implements PulsarDeserializationSc
             keyDeserialization.open(context);
         }
         if (metricOption != null) {
-            sourceExactlyMetric = new SourceExactlyMetric(metricOption);
+            sourceExactlyMetric = new SourceExactlyMetric(metricOption, context.getMetricGroup());
         }
         valueDeserialization.open(context);
     }
