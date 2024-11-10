@@ -17,7 +17,6 @@
 
 package org.apache.inlong.sort.kafka.table;
 
-import org.apache.flink.util.Preconditions;
 import org.apache.inlong.sort.kafka.source.KafkaSource;
 import org.apache.inlong.sort.kafka.source.KafkaSourceBuilder;
 
@@ -52,6 +51,7 @@ import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.utils.DataTypeUtils;
+import org.apache.flink.util.Preconditions;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
