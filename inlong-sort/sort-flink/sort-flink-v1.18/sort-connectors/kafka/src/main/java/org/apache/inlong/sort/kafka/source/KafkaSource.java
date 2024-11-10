@@ -88,8 +88,10 @@ import java.util.function.Supplier;
 // TODO: Add a variable metricSchema to report audit information
 @PublicEvolving
 public class KafkaSource<OUT>
-        implements Source<OUT, KafkaPartitionSplit, KafkaSourceEnumState>,
-        ResultTypeQueryable<OUT> {
+        implements
+            Source<OUT, KafkaPartitionSplit, KafkaSourceEnumState>,
+            ResultTypeQueryable<OUT> {
+
     private static final long serialVersionUID = -8755372893283732098L;
     // Users can choose only one of the following ways to specify the topics to consume from.
     private final KafkaSubscriber subscriber;
@@ -139,17 +141,19 @@ public class KafkaSource<OUT>
     @Override
     public SourceReader<OUT, KafkaPartitionSplit> createReader(SourceReaderContext readerContext)
             throws Exception {
-        return createReader(readerContext, (ignore) -> {});
+        return createReader(readerContext, (ignore) -> {
+        });
     }
 
     @VisibleForTesting
     SourceReader<OUT, KafkaPartitionSplit> createReader(
             SourceReaderContext readerContext, Consumer<Collection<String>> splitFinishedHook)
             throws Exception {
-        FutureCompletingBlockingQueue<RecordsWithSplitIds<ConsumerRecord<byte[], byte[]>>>
-                elementsQueue = new FutureCompletingBlockingQueue<>();
+        FutureCompletingBlockingQueue<RecordsWithSplitIds<ConsumerRecord<byte[], byte[]>>> elementsQueue =
+                new FutureCompletingBlockingQueue<>();
         deserializationSchema.open(
                 new DeserializationSchema.InitializationContext() {
+
                     @Override
                     public MetricGroup getMetricGroup() {
                         return readerContext.metricGroup().addGroup("deserializer");
@@ -164,14 +168,13 @@ public class KafkaSource<OUT>
                 new KafkaSourceReaderMetrics(readerContext.metricGroup());
 
         Supplier<KafkaPartitionSplitReader> splitReaderSupplier =
-                () ->
-                        new KafkaPartitionSplitReader(
-                                props,
-                                readerContext,
-                                kafkaSourceReaderMetrics,
-                                Optional.ofNullable(rackIdSupplier)
-                                        .map(Supplier::get)
-                                        .orElse(null));
+                () -> new KafkaPartitionSplitReader(
+                        props,
+                        readerContext,
+                        kafkaSourceReaderMetrics,
+                        Optional.ofNullable(rackIdSupplier)
+                                .map(Supplier::get)
+                                .orElse(null));
         KafkaRecordEmitter<OUT> recordEmitter = new KafkaRecordEmitter<>(deserializationSchema);
 
         return new KafkaSourceReader<>(

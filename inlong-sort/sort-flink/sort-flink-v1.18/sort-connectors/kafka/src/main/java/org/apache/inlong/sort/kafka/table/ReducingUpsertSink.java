@@ -39,7 +39,8 @@ import java.util.Collection;
  * copied from org.apache.flink:flink-connector-kafka:1.18.0
  */
 class ReducingUpsertSink<WriterState, Comm>
-        implements TwoPhaseCommittingStatefulSink<RowData, WriterState, Comm> {
+        implements
+            TwoPhaseCommittingStatefulSink<RowData, WriterState, Comm> {
 
     private final TwoPhaseCommittingStatefulSink<RowData, WriterState, Comm> wrappedSink;
     private final DataType physicalDataType;
@@ -61,9 +62,8 @@ class ReducingUpsertSink<WriterState, Comm>
     }
 
     @Override
-    public TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
-            RowData, WriterState, Comm>
-    createWriter(InitContext context) throws IOException {
+    public TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> createWriter(
+            InitContext context) throws IOException {
         return new ReducingUpsertWriter<>(
                 wrappedSink.createWriter(context),
                 physicalDataType,
@@ -84,13 +84,11 @@ class ReducingUpsertSink<WriterState, Comm>
     }
 
     @Override
-    public TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
-            RowData, WriterState, Comm>
-    restoreWriter(InitContext context, Collection<WriterState> recoveredState)
+    public TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> restoreWriter(
+            InitContext context, Collection<WriterState> recoveredState)
             throws IOException {
-        final TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
-                RowData, WriterState, Comm>
-                wrappedWriter = wrappedSink.restoreWriter(context, recoveredState);
+        final TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> wrappedWriter =
+                wrappedSink.restoreWriter(context, recoveredState);
         return new ReducingUpsertWriter<>(
                 wrappedWriter,
                 physicalDataType,

@@ -43,7 +43,6 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.utils.DataTypeUtils;
-
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.header.Header;
 
@@ -62,7 +61,9 @@ import java.util.stream.Stream;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
-/** A version-agnostic Kafka {@link DynamicTableSink}. */
+/**
+ * A version-agnostic Kafka {@link DynamicTableSink}.
+ */
 @Internal
 public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetadata {
 
@@ -72,54 +73,79 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
     // Mutable attributes
     // --------------------------------------------------------------------------------------------
 
-    /** Metadata that is appended at the end of a physical sink row. */
+    /**
+     * Metadata that is appended at the end of a physical sink row.
+     */
     protected List<String> metadataKeys;
 
     // --------------------------------------------------------------------------------------------
     // Format attributes
     // --------------------------------------------------------------------------------------------
 
-    /** Data type of consumed data type. */
+    /**
+     * Data type of consumed data type.
+     */
     protected DataType consumedDataType;
 
-    /** Data type to configure the formats. */
+    /**
+     * Data type to configure the formats.
+     */
     protected final DataType physicalDataType;
 
-    /** Optional format for encoding keys to Kafka. */
+    /**
+     * Optional format for encoding keys to Kafka.
+     */
     protected final @Nullable EncodingFormat<SerializationSchema<RowData>> keyEncodingFormat;
 
-    /** Format for encoding values to Kafka. */
+    /**
+     * Format for encoding values to Kafka.
+     */
     protected final EncodingFormat<SerializationSchema<RowData>> valueEncodingFormat;
 
-    /** Indices that determine the key fields and the source position in the consumed row. */
+    /**
+     * Indices that determine the key fields and the source position in the consumed row.
+     */
     protected final int[] keyProjection;
 
-    /** Indices that determine the value fields and the source position in the consumed row. */
+    /**
+     * Indices that determine the value fields and the source position in the consumed row.
+     */
     protected final int[] valueProjection;
 
-    /** Prefix that needs to be removed from fields when constructing the physical data type. */
+    /**
+     * Prefix that needs to be removed from fields when constructing the physical data type.
+     */
     protected final @Nullable String keyPrefix;
 
     // --------------------------------------------------------------------------------------------
     // Kafka-specific attributes
     // --------------------------------------------------------------------------------------------
 
-    /** The defined delivery guarantee. */
+    /**
+     * The defined delivery guarantee.
+     */
     private final DeliveryGuarantee deliveryGuarantee;
 
     /**
      * If the {@link #deliveryGuarantee} is {@link DeliveryGuarantee#EXACTLY_ONCE} the value is the
      * prefix for all ids of opened Kafka transactions.
      */
-    @Nullable private final String transactionalIdPrefix;
+    @Nullable
+    private final String transactionalIdPrefix;
 
-    /** The Kafka topic to write to. */
+    /**
+     * The Kafka topic to write to.
+     */
     protected final String topic;
 
-    /** Properties for the Kafka producer. */
+    /**
+     * Properties for the Kafka producer.
+     */
     protected final Properties properties;
 
-    /** Partitioner to select Kafka partition for each item. */
+    /**
+     * Partitioner to select Kafka partition for each item.
+     */
     protected final @Nullable FlinkKafkaPartitioner<RowData> partitioner;
 
     /**
@@ -128,10 +154,14 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
      */
     protected final boolean upsertMode;
 
-    /** Sink buffer flush config which only supported in upsert mode now. */
+    /**
+     * Sink buffer flush config which only supported in upsert mode now.
+     */
     protected final SinkBufferFlushMode flushMode;
 
-    /** Parallelism of the physical Kafka producer. * */
+    /**
+     * Parallelism of the physical Kafka producer. *
+     */
     protected final @Nullable Integer parallelism;
 
     public KafkaDynamicSink(
@@ -217,6 +247,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                         .build();
         if (flushMode.isEnabled() && upsertMode) {
             return new DataStreamSinkProvider() {
+
                 @Override
                 public DataStreamSink<?> consumeDataStream(
                         ProviderContext providerContext, DataStream<RowData> dataStream) {
@@ -230,9 +261,8 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                                     flushMode,
                                     objectReuse
                                             ? createRowDataTypeSerializer(
-                                            context,
-                                            dataStream.getExecutionConfig())
-                                            ::copy
+                                                    context,
+                                                    dataStream.getExecutionConfig())::copy
                                             : rowData -> rowData);
                     final DataStreamSink<RowData> end = dataStream.sinkTo(sink);
                     providerContext.generateUid(UPSERT_KAFKA_TRANSFORMATION).ifPresent(end::uid);
@@ -366,9 +396,8 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
             List<LogicalType> physicalChildren, int[] keyProjection) {
         return Arrays.stream(keyProjection)
                 .mapToObj(
-                        targetField ->
-                                RowData.createFieldGetter(
-                                        physicalChildren.get(targetField), targetField))
+                        targetField -> RowData.createFieldGetter(
+                                physicalChildren.get(targetField), targetField))
                 .toArray(RowData.FieldGetter[]::new);
     }
 
@@ -392,12 +421,14 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
     // --------------------------------------------------------------------------------------------
 
     enum WritableMetadata {
+
         HEADERS(
                 "headers",
                 // key and value of the map are nullable to make handling easier in queries
                 DataTypes.MAP(DataTypes.STRING().nullable(), DataTypes.BYTES().nullable())
                         .nullable(),
                 new MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -424,6 +455,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                 "timestamp",
                 DataTypes.TIMESTAMP_WITH_LOCAL_TIME_ZONE(3).nullable(),
                 new MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -449,6 +481,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
     }
 
     interface MetadataConverter extends Serializable {
+
         Object read(RowData consumedRow, int pos);
     }
 

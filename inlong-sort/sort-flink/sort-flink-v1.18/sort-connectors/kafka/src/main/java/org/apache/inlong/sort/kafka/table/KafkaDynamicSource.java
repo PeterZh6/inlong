@@ -17,6 +17,9 @@
 
 package org.apache.inlong.sort.kafka.table;
 
+import org.apache.flink.util.Preconditions;
+import org.apache.inlong.sort.kafka.source.KafkaSource;
+import org.apache.inlong.sort.kafka.source.KafkaSourceBuilder;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -49,9 +52,6 @@ import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.utils.DataTypeUtils;
-import org.apache.inlong.sort.kafka.source.KafkaSource;
-import org.apache.inlong.sort.kafka.source.KafkaSourceBuilder;
-import org.apache.inlong.sort.kafka.util.Preconditions;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
@@ -59,6 +59,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -80,7 +81,10 @@ import java.util.stream.Stream;
  */
 @Internal
 public class KafkaDynamicSource
-        implements ScanTableSource, SupportsReadingMetadata, SupportsWatermarkPushDown {
+        implements
+            ScanTableSource,
+            SupportsReadingMetadata,
+            SupportsWatermarkPushDown {
 
     private static final String KAFKA_TRANSFORMATION = "kafka";
 
@@ -278,6 +282,7 @@ public class KafkaDynamicSource
                 createKafkaSource(keyDeserialization, valueDeserialization, producedTypeInfo);
 
         return new DataStreamScanProvider() {
+
             @Override
             public DataStream<RowData> produceDataStream(
                     ProviderContext providerContext, StreamExecutionEnvironment execEnv) {
@@ -478,10 +483,9 @@ public class KafkaDynamicSource
             case SPECIFIC_OFFSETS:
                 Map<TopicPartition, Long> offsets = new HashMap<>();
                 specificStartupOffsets.forEach(
-                        (tp, offset) ->
-                                offsets.put(
-                                        new TopicPartition(tp.getTopic(), tp.getPartition()),
-                                        offset));
+                        (tp, offset) -> offsets.put(
+                                new TopicPartition(tp.getTopic(), tp.getPartition()),
+                                offset));
                 kafkaSourceBuilder.setStartingOffsets(OffsetsInitializer.offsets(offsets));
                 break;
             case TIMESTAMP:
@@ -503,10 +507,9 @@ public class KafkaDynamicSource
             case SPECIFIC_OFFSETS:
                 Map<TopicPartition, Long> offsets = new HashMap<>();
                 specificBoundedOffsets.forEach(
-                        (tp, offset) ->
-                                offsets.put(
-                                        new TopicPartition(tp.getTopic(), tp.getPartition()),
-                                        offset));
+                        (tp, offset) -> offsets.put(
+                                new TopicPartition(tp.getTopic(), tp.getPartition()),
+                                offset));
                 kafkaSourceBuilder.setBounded(OffsetsInitializer.offsets(offsets));
                 break;
             case TIMESTAMP:
@@ -526,16 +529,15 @@ public class KafkaDynamicSource
                 .filter(ors -> ors.name().equals(offsetResetConfig.toUpperCase(Locale.ROOT)))
                 .findAny()
                 .orElseThrow(
-                        () ->
-                                new IllegalArgumentException(
-                                        String.format(
-                                                "%s can not be set to %s. Valid values: [%s]",
-                                                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                                                offsetResetConfig,
-                                                Arrays.stream(OffsetResetStrategy.values())
-                                                        .map(Enum::name)
-                                                        .map(String::toLowerCase)
-                                                        .collect(Collectors.joining(",")))));
+                        () -> new IllegalArgumentException(
+                                String.format(
+                                        "%s can not be set to %s. Valid values: [%s]",
+                                        ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                                        offsetResetConfig,
+                                        Arrays.stream(OffsetResetStrategy.values())
+                                                .map(Enum::name)
+                                                .map(String::toLowerCase)
+                                                .collect(Collectors.joining(",")))));
     }
 
     private KafkaDeserializationSchema<RowData> createKafkaDeserializationSchema(
@@ -545,11 +547,10 @@ public class KafkaDynamicSource
         final DynamicKafkaDeserializationSchema.MetadataConverter[] metadataConverters =
                 metadataKeys.stream()
                         .map(
-                                k ->
-                                        Stream.of(ReadableMetadata.values())
-                                                .filter(rm -> rm.key.equals(k))
-                                                .findFirst()
-                                                .orElseThrow(IllegalStateException::new))
+                                k -> Stream.of(ReadableMetadata.values())
+                                        .filter(rm -> rm.key.equals(k))
+                                        .findFirst()
+                                        .orElseThrow(IllegalStateException::new))
                         .map(m -> m.converter)
                         .toArray(DynamicKafkaDeserializationSchema.MetadataConverter[]::new);
 
@@ -563,10 +564,10 @@ public class KafkaDynamicSource
         // adjust value format projection to include value format's metadata columns at the end
         final int[] adjustedValueProjection =
                 IntStream.concat(
-                                IntStream.of(valueProjection),
-                                IntStream.range(
-                                        keyProjection.length + valueProjection.length,
-                                        adjustedPhysicalArity))
+                        IntStream.of(valueProjection),
+                        IntStream.range(
+                                keyProjection.length + valueProjection.length,
+                                adjustedPhysicalArity))
                         .toArray();
 
         return new DynamicKafkaDeserializationSchema(
@@ -601,10 +602,12 @@ public class KafkaDynamicSource
     // --------------------------------------------------------------------------------------------
 
     enum ReadableMetadata {
+
         TOPIC(
                 "topic",
                 DataTypes.STRING().notNull(),
                 new DynamicKafkaDeserializationSchema.MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -617,6 +620,7 @@ public class KafkaDynamicSource
                 "partition",
                 DataTypes.INT().notNull(),
                 new DynamicKafkaDeserializationSchema.MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -631,6 +635,7 @@ public class KafkaDynamicSource
                 DataTypes.MAP(DataTypes.STRING().nullable(), DataTypes.BYTES().nullable())
                         .notNull(),
                 new DynamicKafkaDeserializationSchema.MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -647,6 +652,7 @@ public class KafkaDynamicSource
                 "leader-epoch",
                 DataTypes.INT().nullable(),
                 new DynamicKafkaDeserializationSchema.MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -659,6 +665,7 @@ public class KafkaDynamicSource
                 "offset",
                 DataTypes.BIGINT().notNull(),
                 new DynamicKafkaDeserializationSchema.MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -671,6 +678,7 @@ public class KafkaDynamicSource
                 "timestamp",
                 DataTypes.TIMESTAMP_WITH_LOCAL_TIME_ZONE(3).notNull(),
                 new DynamicKafkaDeserializationSchema.MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -683,6 +691,7 @@ public class KafkaDynamicSource
                 "timestamp-type",
                 DataTypes.STRING().notNull(),
                 new DynamicKafkaDeserializationSchema.MetadataConverter() {
+
                     private static final long serialVersionUID = 1L;
 
                     @Override

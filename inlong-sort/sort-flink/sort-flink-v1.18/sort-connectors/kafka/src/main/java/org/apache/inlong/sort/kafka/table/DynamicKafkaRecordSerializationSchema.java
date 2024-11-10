@@ -25,7 +25,6 @@ import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.Preconditions;
-
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import javax.annotation.Nullable;
@@ -39,7 +38,8 @@ class DynamicKafkaRecordSerializationSchema implements KafkaRecordSerializationS
 
     private final String topic;
     private final FlinkKafkaPartitioner<RowData> partitioner;
-    @Nullable private final SerializationSchema<RowData> keySerialization;
+    @Nullable
+    private final SerializationSchema<RowData> keySerialization;
     private final SerializationSchema<RowData> valueSerialization;
     private final RowData.FieldGetter[] keyFieldGetters;
     private final RowData.FieldGetter[] valueFieldGetters;

@@ -41,7 +41,7 @@ public class SinkBufferFlushMode implements Serializable {
         // validation
         if (isEnabled()
                 && !(batchSize > DISABLED_BATCH_SIZE
-                && batchIntervalMs > DISABLED_BATCH_INTERVAL)) {
+                        && batchIntervalMs > DISABLED_BATCH_INTERVAL)) {
             throw new IllegalArgumentException(
                     String.format(
                             "batchSize and batchInterval must greater than zero if buffer flush is enabled,"

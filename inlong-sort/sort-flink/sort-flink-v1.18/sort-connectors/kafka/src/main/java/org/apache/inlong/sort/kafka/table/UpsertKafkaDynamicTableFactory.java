@@ -17,6 +17,8 @@
 
 package org.apache.inlong.sort.kafka.table;
 
+import org.apache.inlong.sort.kafka.table.KafkaConnectorOptionsUtil.BoundedOptions;
+
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -41,7 +43,6 @@ import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.factories.SerializationFormatFactory;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.RowKind;
-import org.apache.inlong.sort.kafka.table.KafkaConnectorOptionsUtil.BoundedOptions;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -79,13 +80,14 @@ import static org.apache.inlong.sort.kafka.table.KafkaConnectorOptionsUtil.getSo
 import static org.apache.inlong.sort.kafka.table.KafkaConnectorOptionsUtil.validateScanBoundedMode;
 import static org.apache.inlong.sort.protocol.constant.KafkaConstant.UPSERT_KAFKA;
 
-
 /**
  * Upsert-Kafka factory.
  * copied from org.apache.flink:flink-connector-kafka:1.18.0
  */
 public class UpsertKafkaDynamicTableFactory
-        implements DynamicTableSourceFactory, DynamicTableSinkFactory {
+        implements
+            DynamicTableSourceFactory,
+            DynamicTableSinkFactory {
 
     public static final String IDENTIFIER = UPSERT_KAFKA;
 
@@ -333,7 +335,9 @@ public class UpsertKafkaDynamicTableFactory
      * for insert-only format.
      */
     protected static class DecodingFormatWrapper
-            implements DecodingFormat<DeserializationSchema<RowData>> {
+            implements
+                DecodingFormat<DeserializationSchema<RowData>> {
+
         private final DecodingFormat<DeserializationSchema<RowData>> innerDecodingFormat;
 
         private static final ChangelogMode SOURCE_CHANGELOG_MODE =
@@ -383,7 +387,9 @@ public class UpsertKafkaDynamicTableFactory
      * for insert-only format.
      */
     protected static class EncodingFormatWrapper
-            implements EncodingFormat<SerializationSchema<RowData>> {
+            implements
+                EncodingFormat<SerializationSchema<RowData>> {
+
         private final EncodingFormat<SerializationSchema<RowData>> innerEncodingFormat;
 
         public static final ChangelogMode SINK_CHANGELOG_MODE =

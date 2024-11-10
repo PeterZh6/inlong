@@ -289,6 +289,7 @@ public class KafkaConnectorOptions {
      * Startup mode for the Kafka consumer, see {@link #SCAN_STARTUP_MODE}.
      */
     public enum ScanStartupMode implements DescribedEnum {
+
         EARLIEST_OFFSET("earliest-offset", text("Start from the earliest offset possible.")),
         LATEST_OFFSET("latest-offset", text("Start from the latest offset.")),
         GROUP_OFFSETS(
@@ -323,6 +324,7 @@ public class KafkaConnectorOptions {
      * Bounded mode for the Kafka consumer, see {@link #SCAN_BOUNDED_MODE}.
      */
     public enum ScanBoundedMode implements DescribedEnum {
+
         UNBOUNDED("unbounded", text("Do not stop consuming")),
         LATEST_OFFSET(
                 "latest-offset",
@@ -364,4 +366,3 @@ public class KafkaConnectorOptions {
     private KafkaConnectorOptions() {
     }
 }
-

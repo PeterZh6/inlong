@@ -30,12 +30,9 @@ import org.apache.flink.util.function.SerializableSupplier;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.kafka.common.serialization.Deserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -94,6 +91,7 @@ import static org.apache.flink.util.Preconditions.checkState;
 // TODO: Add a variable metricSchema to report audit information
 @PublicEvolving
 public class KafkaSourceBuilder<OUT> {
+
     private static final Logger LOG = LoggerFactory.getLogger(KafkaSourceBuilder.class);
     private static final String[] REQUIRED_CONFIGS = {ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG};
     // The subscriber specifies the partitions to subscribe to.
@@ -446,7 +444,7 @@ public class KafkaSourceBuilder<OUT> {
                 rackIdSupplier);
     }
 
-    // ------------- private helpers  --------------
+    // ------------- private helpers --------------
 
     private void ensureSubscriberIsNull(String attemptingSubscribeMode) {
         if (subscriber != null) {
@@ -544,12 +542,12 @@ public class KafkaSourceBuilder<OUT> {
         boolean autoCommit =
                 props.containsKey(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG)
                         && Boolean.parseBoolean(
-                        props.getProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG));
+                                props.getProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG));
         boolean commitOnCheckpoint =
                 props.containsKey(KafkaSourceOptions.COMMIT_OFFSETS_ON_CHECKPOINT.key())
                         && Boolean.parseBoolean(
-                        props.getProperty(
-                                KafkaSourceOptions.COMMIT_OFFSETS_ON_CHECKPOINT.key()));
+                                props.getProperty(
+                                        KafkaSourceOptions.COMMIT_OFFSETS_ON_CHECKPOINT.key()));
         return autoCommit || commitOnCheckpoint;
     }
 }

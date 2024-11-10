@@ -682,6 +682,7 @@ class KafkaConnectorOptionsUtil {
 
     /** Kafka startup options. * */
     public static class StartupOptions {
+
         public StartupMode startupMode;
         public Map<KafkaTopicPartition, Long> specificOffsets;
         public long startupTimestampMillis;
@@ -689,10 +690,12 @@ class KafkaConnectorOptionsUtil {
 
     /** Kafka bounded options. * */
     public static class BoundedOptions {
+
         public BoundedMode boundedMode;
         public Map<KafkaTopicPartition, Long> specificOffsets;
         public long boundedTimestampMillis;
     }
 
-    private KafkaConnectorOptionsUtil() {}
+    private KafkaConnectorOptionsUtil() {
+    }
 }

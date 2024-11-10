@@ -32,7 +32,7 @@
 
     <properties>
         <inlong.root.dir>${project.parent.parent.parent.parent.parent.basedir}</inlong.root.dir>
-        <flink.connector.kafka.version>3.3.0-1.19</flink.connector.kafka.version>
+        <kafka.connector.version>3.2.0-1.18</kafka.connector.version>
         <kafka.version>3.4.0</kafka.version>
     </properties>
 
@@ -41,11 +41,6 @@
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>${kafka.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.inlong</groupId>
@@ -65,12 +60,14 @@
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-connector-kafka</artifactId>
-            <version>${flink.connector.kafka.version}</version>
+            <version>3.2.0-1.18</version>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>
+                <!-- Shade all the dependencies to avoid conflicts -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <executions>
@@ -81,112 +78,49 @@
                         </goals>
                         <phase>package</phase>
                         <configuration>
+                            <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
                             <artifactSet>
                                 <includes>
                                     <include>org.apache.inlong:*</include>
+                                    <include>io.streamnative.connectors:kafka-flink-connector-origin*</include>
+                                    <include>io.streamnative.connectors:flink-protobuf</include>
                                     <include>org.apache.kafka:*</include>
                                     <include>org.apache.flink:flink-connector-kafka</include>
-                                    <include>org.apache.flink:flink-connector-base</include>
-                                    <!--  Include fixed version 18.0-13.0 of flink shaded guava  -->
-                                    <include>org.apache.flink:flink-shaded-guava</include>
-                                    <include>org.apache.httpcomponents:*</include>
-                                    <include>org.apache.commons:commons-lang3</include>
                                     <include>com.google.protobuf:*</include>
-                                    <include>com.google.guava:*</include>
-                                    <include>joda-time:*</include>
-                                    <include>com.fasterxml.jackson.core:*</include>
-                                    <include>com.amazonaws:*</include>
-                                    <include>software.amazon.ion:*</include>
-                                    <include>commons-logging:commons-logging</include>
+                                    <include>org.bouncycastle*:*</include>
+                                    <include>org.bouncycastle*:*</include>
+                                    <include>javax.*:*</include>
+                                    <include>org.lz4*:*</include>
+                                    <include>org.slf4j:jul-to-slf4j</include>
+                                    <include>io.airlift:*</include>
                                 </includes>
                             </artifactSet>
                             <filters>
-                                <filter>
-                                    <artifact>org.apache.kafka:*</artifact>
-                                    <excludes>
-                                        <exclude>kafka/kafka-version.properties</exclude>
-                                        <exclude>LICENSE</exclude>
-                                        <!-- Does not contain anything relevant.
-                                            Cites a binary dependency on jersey, but this is neither reflected in the
-                                            dependency graph, nor are any jersey files bundled. -->
-                                        <exclude>NOTICE</exclude>
-                                        <exclude>common/**</exclude>
-                                    </excludes>
-                                </filter>
                                 <filter>
                                     <artifact>org.apache.inlong:sort-connector-*</artifact>
                                     <includes>
                                         <include>org/apache/inlong/**</include>
                                         <include>META-INF/services/org.apache.flink.table.factories.Factory</include>
-                                        <include>META-INF/services/org.apache.flink.table.factories.TableFactory</include>
                                     </includes>
                                 </filter>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>log4j.properties</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
                             </filters>
-                            <relocations>
-                                <relocation>
-                                    <pattern>org.apache.kafka</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.kafka</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.commons.logging</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.commons.logging</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.commons.lang3</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.commons.lang3</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.http</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.http</shadedPattern>
-                                </relocation>
-
-                                <relocation>
-                                    <pattern>com.google</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.com.google</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>com.amazonaws</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.com.amazonaws</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>software.amazon.ion</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.software.amazon.ion</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>com.fasterxml.jackson</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.com.fasterxml.jackson</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.joda.time</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.joda.time</shadedPattern>
-                                </relocation>
-
-                                <relocation>
-                                    <pattern>org.apache.inlong.sort.base</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.inlong.sort.base</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.inlong.sort.configuration</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.inlong.sort.configuration</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.inlong.sort.protocol</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.inlong.sort.protocol</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.inlong.sort.schema</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.inlong.sort.schema</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.inlong.sort.util</pattern>
-                                    <shadedPattern>org.apache.inlong.sort.kafka.shaded.org.apache.inlong.sort.util</shadedPattern>
-                                </relocation>
-                            </relocations>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.PluginXmlResourceTransformer" />
+                            </transformers>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
-
 </project>

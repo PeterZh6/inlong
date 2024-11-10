@@ -50,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
@@ -95,7 +96,6 @@ import static org.apache.inlong.sort.kafka.table.KafkaConnectorOptionsUtil.valid
 import static org.apache.inlong.sort.kafka.table.KafkaConnectorOptionsUtil.validateTableSourceOptions;
 import static org.apache.inlong.sort.protocol.constant.KafkaConstant.KAFKA;
 
-
 /**
  * Factory for creating configured instances of {@link KafkaDynamicSource} and {@link
  * KafkaDynamicSink}.
@@ -103,7 +103,9 @@ import static org.apache.inlong.sort.protocol.constant.KafkaConstant.KAFKA;
  */
 @Internal
 public class KafkaDynamicTableFactory
-        implements DynamicTableSourceFactory, DynamicTableSinkFactory {
+        implements
+            DynamicTableSourceFactory,
+            DynamicTableSinkFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaDynamicTableFactory.class);
     private static final ConfigOption<String> SINK_SEMANTIC =
@@ -156,17 +158,17 @@ public class KafkaDynamicTableFactory
     @Override
     public Set<ConfigOption<?>> forwardOptions() {
         return Stream.of(
-                        PROPS_BOOTSTRAP_SERVERS,
-                        PROPS_GROUP_ID,
-                        TOPIC,
-                        TOPIC_PATTERN,
-                        SCAN_STARTUP_MODE,
-                        SCAN_STARTUP_SPECIFIC_OFFSETS,
-                        SCAN_TOPIC_PARTITION_DISCOVERY,
-                        SCAN_STARTUP_TIMESTAMP_MILLIS,
-                        SINK_PARTITIONER,
-                        SINK_PARALLELISM,
-                        TRANSACTIONAL_ID_PREFIX)
+                PROPS_BOOTSTRAP_SERVERS,
+                PROPS_GROUP_ID,
+                TOPIC,
+                TOPIC_PATTERN,
+                SCAN_STARTUP_MODE,
+                SCAN_STARTUP_SPECIFIC_OFFSETS,
+                SCAN_TOPIC_PARTITION_DISCOVERY,
+                SCAN_STARTUP_TIMESTAMP_MILLIS,
+                SINK_PARTITIONER,
+                SINK_PARALLELISM,
+                TRANSACTIONAL_ID_PREFIX)
                 .collect(Collectors.toSet());
     }
 
@@ -326,21 +328,19 @@ public class KafkaDynamicTableFactory
     private static DecodingFormat<DeserializationSchema<RowData>> getValueDecodingFormat(
             TableFactoryHelper helper) {
         return helper.discoverOptionalDecodingFormat(
-                        DeserializationFormatFactory.class, FactoryUtil.FORMAT)
+                DeserializationFormatFactory.class, FactoryUtil.FORMAT)
                 .orElseGet(
-                        () ->
-                                helper.discoverDecodingFormat(
-                                        DeserializationFormatFactory.class, VALUE_FORMAT));
+                        () -> helper.discoverDecodingFormat(
+                                DeserializationFormatFactory.class, VALUE_FORMAT));
     }
 
     private static EncodingFormat<SerializationSchema<RowData>> getValueEncodingFormat(
             TableFactoryHelper helper) {
         return helper.discoverOptionalEncodingFormat(
-                        SerializationFormatFactory.class, FactoryUtil.FORMAT)
+                SerializationFormatFactory.class, FactoryUtil.FORMAT)
                 .orElseGet(
-                        () ->
-                                helper.discoverEncodingFormat(
-                                        SerializationFormatFactory.class, VALUE_FORMAT));
+                        () -> helper.discoverEncodingFormat(
+                                SerializationFormatFactory.class, VALUE_FORMAT));
     }
 
     private static void validatePKConstraints(

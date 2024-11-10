@@ -27,7 +27,6 @@ import org.apache.flink.types.DeserializationException;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
-
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nullable;
@@ -142,6 +141,7 @@ class DynamicKafkaDeserializationSchema implements KafkaDeserializationSchema<Ro
     // --------------------------------------------------------------------------------------------
 
     interface MetadataConverter extends Serializable {
+
         Object read(ConsumerRecord<?, ?> record);
     }
 
@@ -180,7 +180,9 @@ class DynamicKafkaDeserializationSchema implements KafkaDeserializationSchema<Ro
      * </ul>
      */
     private static final class OutputProjectionCollector
-            implements Collector<RowData>, Serializable {
+            implements
+                Collector<RowData>,
+                Serializable {
 
         private static final long serialVersionUID = 1L;
 
