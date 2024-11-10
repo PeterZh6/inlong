@@ -40,11 +40,16 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.inlong.sort.kafka.table.DynamicKafkaRecordSerializationSchema.createProjectedRow;
 
+/**
+ * copied from org.apache.flink:flink-connector-kafka:1.18.0
+ */
 class ReducingUpsertWriter<WriterState, Comm>
-        implements
-            TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> {
+        implements TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
+        RowData, WriterState, Comm> {
 
-    private final TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> wrappedWriter;
+    private final TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
+            RowData, WriterState, Comm>
+            wrappedWriter;
     private final WrappedContext wrappedContext = new WrappedContext();
     private final int batchMaxRowNums;
     private final Function<RowData, RowData> valueCopyFunction;
@@ -57,7 +62,9 @@ class ReducingUpsertWriter<WriterState, Comm>
     private long lastFlush = System.currentTimeMillis();
 
     ReducingUpsertWriter(
-            TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> wrappedWriter,
+            TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
+                    RowData, WriterState, Comm>
+                    wrappedWriter,
             DataType physicalDataType,
             int[] keyProjection,
             SinkBufferFlushMode bufferFlushMode,
@@ -73,8 +80,9 @@ class ReducingUpsertWriter<WriterState, Comm>
         final RowData.FieldGetter[] keyFieldGetters =
                 Arrays.stream(keyProjection)
                         .mapToObj(
-                                targetField -> RowData.createFieldGetter(
-                                        fields.get(targetField), targetField))
+                                targetField ->
+                                        RowData.createFieldGetter(
+                                                fields.get(targetField), targetField))
                         .toArray(RowData.FieldGetter[]::new);
         this.keyExtractor = rowData -> createProjectedRow(rowData, RowKind.INSERT, keyFieldGetters);
         this.valueCopyFunction = valueCopyFunction;
@@ -164,7 +172,6 @@ class ReducingUpsertWriter<WriterState, Comm>
      * ReducingUpsertWriter} will emit the records in the buffer with memorized timestamp.
      */
     private static class WrappedContext implements SinkWriter.Context {
-
         private Long timestamp;
         private SinkWriter.Context context;
 

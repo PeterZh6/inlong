@@ -36,10 +36,10 @@ import java.util.Collection;
  * <p>The sink provides eventual consistency guarantees under {@link
  * org.apache.flink.connector.base.DeliveryGuarantee#AT_LEAST_ONCE} because the updates are
  * idempotent therefore duplicates have no effect.
+ * copied from org.apache.flink:flink-connector-kafka:1.18.0
  */
 class ReducingUpsertSink<WriterState, Comm>
-        implements
-            TwoPhaseCommittingStatefulSink<RowData, WriterState, Comm> {
+        implements TwoPhaseCommittingStatefulSink<RowData, WriterState, Comm> {
 
     private final TwoPhaseCommittingStatefulSink<RowData, WriterState, Comm> wrappedSink;
     private final DataType physicalDataType;
@@ -61,8 +61,9 @@ class ReducingUpsertSink<WriterState, Comm>
     }
 
     @Override
-    public PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> createWriter(InitContext context)
-            throws IOException {
+    public TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
+            RowData, WriterState, Comm>
+    createWriter(InitContext context) throws IOException {
         return new ReducingUpsertWriter<>(
                 wrappedSink.createWriter(context),
                 physicalDataType,
@@ -83,11 +84,13 @@ class ReducingUpsertSink<WriterState, Comm>
     }
 
     @Override
-    public PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> restoreWriter(InitContext context,
-            Collection<WriterState> recoveredState)
+    public TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
+            RowData, WriterState, Comm>
+    restoreWriter(InitContext context, Collection<WriterState> recoveredState)
             throws IOException {
-        final PrecommittingStatefulSinkWriter<RowData, WriterState, Comm> wrappedWriter =
-                wrappedSink.restoreWriter(context, recoveredState);
+        final TwoPhaseCommittingStatefulSink.PrecommittingStatefulSinkWriter<
+                RowData, WriterState, Comm>
+                wrappedWriter = wrappedSink.restoreWriter(context, recoveredState);
         return new ReducingUpsertWriter<>(
                 wrappedWriter,
                 physicalDataType,

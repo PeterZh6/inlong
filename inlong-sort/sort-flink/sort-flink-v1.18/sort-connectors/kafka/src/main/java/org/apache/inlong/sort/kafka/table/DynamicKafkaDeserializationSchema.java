@@ -17,7 +17,6 @@
 
 package org.apache.inlong.sort.kafka.table;
 
-import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.connectors.kafka.KafkaDeserializationSchema;
@@ -28,6 +27,7 @@ import org.apache.flink.types.DeserializationException;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nullable;
@@ -36,8 +36,10 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-/** A specific {@link KafkaSerializationSchema} for {@link KafkaDynamicSource}. */
-@Internal
+/** A specific {@link KafkaSerializationSchema} for {@link KafkaDynamicSource}.
+ * copied from org.apache.flink:flink-connector-kafka:1.18.0
+ */
+// TODO: support SourceExactlyMetric and add metric collection points
 class DynamicKafkaDeserializationSchema implements KafkaDeserializationSchema<RowData> {
 
     private static final long serialVersionUID = 1L;
@@ -140,7 +142,6 @@ class DynamicKafkaDeserializationSchema implements KafkaDeserializationSchema<Ro
     // --------------------------------------------------------------------------------------------
 
     interface MetadataConverter extends Serializable {
-
         Object read(ConsumerRecord<?, ?> record);
     }
 
@@ -179,9 +180,7 @@ class DynamicKafkaDeserializationSchema implements KafkaDeserializationSchema<Ro
      * </ul>
      */
     private static final class OutputProjectionCollector
-            implements
-                Collector<RowData>,
-                Serializable {
+            implements Collector<RowData>, Serializable {
 
         private static final long serialVersionUID = 1L;
 

@@ -20,7 +20,9 @@ package org.apache.inlong.sort.kafka.table;
 import java.io.Serializable;
 import java.util.Objects;
 
-/** Sink buffer flush configuration. */
+/** Sink buffer flush configuration.
+ * copied from org.apache.flink:flink-connector-kafka:1.18.0
+ */
 public class SinkBufferFlushMode implements Serializable {
 
     private static final int DISABLED_BATCH_SIZE = 0;
@@ -39,7 +41,7 @@ public class SinkBufferFlushMode implements Serializable {
         // validation
         if (isEnabled()
                 && !(batchSize > DISABLED_BATCH_SIZE
-                        && batchIntervalMs > DISABLED_BATCH_INTERVAL)) {
+                && batchIntervalMs > DISABLED_BATCH_INTERVAL)) {
             throw new IllegalArgumentException(
                     String.format(
                             "batchSize and batchInterval must greater than zero if buffer flush is enabled,"

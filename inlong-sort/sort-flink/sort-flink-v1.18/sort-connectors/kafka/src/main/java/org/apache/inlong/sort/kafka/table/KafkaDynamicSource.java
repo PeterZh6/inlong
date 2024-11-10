@@ -17,13 +17,12 @@
 
 package org.apache.inlong.sort.kafka.table;
 
+
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.connector.source.Boundedness;
-import org.apache.flink.connector.kafka.source.KafkaSource;
-import org.apache.flink.connector.kafka.source.KafkaSourceBuilder;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.NoStoppingOffsetsInitializer;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.connector.kafka.source.reader.deserializer.KafkaRecordDeserializationSchema;
@@ -34,7 +33,6 @@ import org.apache.flink.streaming.connectors.kafka.KafkaDeserializationSchema;
 import org.apache.flink.streaming.connectors.kafka.config.BoundedMode;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
-import org.apache.flink.streaming.connectors.kafka.table.DynamicKafkaDeserializationSchema.MetadataConverter;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.Projection;
@@ -51,7 +49,9 @@ import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.utils.DataTypeUtils;
-import org.apache.flink.util.Preconditions;
+import org.apache.inlong.sort.kafka.source.KafkaSource;
+import org.apache.inlong.sort.kafka.source.KafkaSourceBuilder;
+import org.apache.inlong.sort.kafka.util.Preconditions;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
@@ -59,7 +59,6 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -75,13 +74,13 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-/** A version-agnostic Kafka {@link ScanTableSource}. */
+/**
+ * A version-agnostic Kafka {@link ScanTableSource}.
+ * copied from org.apache.flink:flink-connector-kafka:1.18.0
+ */
 @Internal
 public class KafkaDynamicSource
-        implements
-            ScanTableSource,
-            SupportsReadingMetadata,
-            SupportsWatermarkPushDown {
+        implements ScanTableSource, SupportsReadingMetadata, SupportsWatermarkPushDown {
 
     private static final String KAFKA_TRANSFORMATION = "kafka";
 
@@ -89,13 +88,19 @@ public class KafkaDynamicSource
     // Mutable attributes
     // --------------------------------------------------------------------------------------------
 
-    /** Data type that describes the final output of the source. */
+    /**
+     * Data type that describes the final output of the source.
+     */
     protected DataType producedDataType;
 
-    /** Metadata that is appended at the end of a physical source row. */
+    /**
+     * Metadata that is appended at the end of a physical source row.
+     */
     protected List<String> metadataKeys;
 
-    /** Watermark strategy that is used to generate per-partition watermark. */
+    /**
+     * Watermark strategy that is used to generate per-partition watermark.
+     */
     protected @Nullable WatermarkStrategy<RowData> watermarkStrategy;
 
     // --------------------------------------------------------------------------------------------
@@ -104,35 +109,53 @@ public class KafkaDynamicSource
 
     private static final String VALUE_METADATA_PREFIX = "value.";
 
-    /** Data type to configure the formats. */
+    /**
+     * Data type to configure the formats.
+     */
     protected final DataType physicalDataType;
 
-    /** Optional format for decoding keys from Kafka. */
+    /**
+     * Optional format for decoding keys from Kafka.
+     */
     protected final @Nullable DecodingFormat<DeserializationSchema<RowData>> keyDecodingFormat;
 
-    /** Format for decoding values from Kafka. */
+    /**
+     * Format for decoding values from Kafka.
+     */
     protected final DecodingFormat<DeserializationSchema<RowData>> valueDecodingFormat;
 
-    /** Indices that determine the key fields and the target position in the produced row. */
+    /**
+     * Indices that determine the key fields and the target position in the produced row.
+     */
     protected final int[] keyProjection;
 
-    /** Indices that determine the value fields and the target position in the produced row. */
+    /**
+     * Indices that determine the value fields and the target position in the produced row.
+     */
     protected final int[] valueProjection;
 
-    /** Prefix that needs to be removed from fields when constructing the physical data type. */
+    /**
+     * Prefix that needs to be removed from fields when constructing the physical data type.
+     */
     protected final @Nullable String keyPrefix;
 
     // --------------------------------------------------------------------------------------------
     // Kafka-specific attributes
     // --------------------------------------------------------------------------------------------
 
-    /** The Kafka topics to consume. */
+    /**
+     * The Kafka topics to consume.
+     */
     protected final List<String> topics;
 
-    /** The Kafka topic pattern to consume. */
+    /**
+     * The Kafka topic pattern to consume.
+     */
     protected final Pattern topicPattern;
 
-    /** Properties for the Kafka consumer. */
+    /**
+     * Properties for the Kafka consumer.
+     */
     protected final Properties properties;
 
     /**
@@ -152,7 +175,9 @@ public class KafkaDynamicSource
      */
     protected final long startupTimestampMillis;
 
-    /** The bounded mode for the contained consumer (default is an unbounded data stream). */
+    /**
+     * The bounded mode for the contained consumer (default is an unbounded data stream).
+     */
     protected final BoundedMode boundedMode;
 
     /**
@@ -167,7 +192,9 @@ public class KafkaDynamicSource
      */
     protected final long boundedTimestampMillis;
 
-    /** Flag to determine source mode. In upsert mode, it will keep the tombstone message. * */
+    /**
+     * Flag to determine source mode. In upsert mode, it will keep the tombstone message. *
+     */
     protected final boolean upsertMode;
 
     protected final String tableIdentifier;
@@ -251,7 +278,6 @@ public class KafkaDynamicSource
                 createKafkaSource(keyDeserialization, valueDeserialization, producedTypeInfo);
 
         return new DataStreamScanProvider() {
-
             @Override
             public DataStream<RowData> produceDataStream(
                     ProviderContext providerContext, StreamExecutionEnvironment execEnv) {
@@ -452,9 +478,10 @@ public class KafkaDynamicSource
             case SPECIFIC_OFFSETS:
                 Map<TopicPartition, Long> offsets = new HashMap<>();
                 specificStartupOffsets.forEach(
-                        (tp, offset) -> offsets.put(
-                                new TopicPartition(tp.getTopic(), tp.getPartition()),
-                                offset));
+                        (tp, offset) ->
+                                offsets.put(
+                                        new TopicPartition(tp.getTopic(), tp.getPartition()),
+                                        offset));
                 kafkaSourceBuilder.setStartingOffsets(OffsetsInitializer.offsets(offsets));
                 break;
             case TIMESTAMP:
@@ -476,9 +503,10 @@ public class KafkaDynamicSource
             case SPECIFIC_OFFSETS:
                 Map<TopicPartition, Long> offsets = new HashMap<>();
                 specificBoundedOffsets.forEach(
-                        (tp, offset) -> offsets.put(
-                                new TopicPartition(tp.getTopic(), tp.getPartition()),
-                                offset));
+                        (tp, offset) ->
+                                offsets.put(
+                                        new TopicPartition(tp.getTopic(), tp.getPartition()),
+                                        offset));
                 kafkaSourceBuilder.setBounded(OffsetsInitializer.offsets(offsets));
                 break;
             case TIMESTAMP:
@@ -498,30 +526,32 @@ public class KafkaDynamicSource
                 .filter(ors -> ors.name().equals(offsetResetConfig.toUpperCase(Locale.ROOT)))
                 .findAny()
                 .orElseThrow(
-                        () -> new IllegalArgumentException(
-                                String.format(
-                                        "%s can not be set to %s. Valid values: [%s]",
-                                        ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                                        offsetResetConfig,
-                                        Arrays.stream(OffsetResetStrategy.values())
-                                                .map(Enum::name)
-                                                .map(String::toLowerCase)
-                                                .collect(Collectors.joining(",")))));
+                        () ->
+                                new IllegalArgumentException(
+                                        String.format(
+                                                "%s can not be set to %s. Valid values: [%s]",
+                                                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                                                offsetResetConfig,
+                                                Arrays.stream(OffsetResetStrategy.values())
+                                                        .map(Enum::name)
+                                                        .map(String::toLowerCase)
+                                                        .collect(Collectors.joining(",")))));
     }
 
     private KafkaDeserializationSchema<RowData> createKafkaDeserializationSchema(
             DeserializationSchema<RowData> keyDeserialization,
             DeserializationSchema<RowData> valueDeserialization,
             TypeInformation<RowData> producedTypeInfo) {
-        final MetadataConverter[] metadataConverters =
+        final DynamicKafkaDeserializationSchema.MetadataConverter[] metadataConverters =
                 metadataKeys.stream()
                         .map(
-                                k -> Stream.of(ReadableMetadata.values())
-                                        .filter(rm -> rm.key.equals(k))
-                                        .findFirst()
-                                        .orElseThrow(IllegalStateException::new))
+                                k ->
+                                        Stream.of(ReadableMetadata.values())
+                                                .filter(rm -> rm.key.equals(k))
+                                                .findFirst()
+                                                .orElseThrow(IllegalStateException::new))
                         .map(m -> m.converter)
-                        .toArray(MetadataConverter[]::new);
+                        .toArray(DynamicKafkaDeserializationSchema.MetadataConverter[]::new);
 
         // check if connector metadata is used at all
         final boolean hasMetadata = metadataKeys.size() > 0;
@@ -533,10 +563,10 @@ public class KafkaDynamicSource
         // adjust value format projection to include value format's metadata columns at the end
         final int[] adjustedValueProjection =
                 IntStream.concat(
-                        IntStream.of(valueProjection),
-                        IntStream.range(
-                                keyProjection.length + valueProjection.length,
-                                adjustedPhysicalArity))
+                                IntStream.of(valueProjection),
+                                IntStream.range(
+                                        keyProjection.length + valueProjection.length,
+                                        adjustedPhysicalArity))
                         .toArray();
 
         return new DynamicKafkaDeserializationSchema(
@@ -552,7 +582,7 @@ public class KafkaDynamicSource
     }
 
     private @Nullable DeserializationSchema<RowData> createDeserialization(
-            Context context,
+            DynamicTableSource.Context context,
             @Nullable DecodingFormat<DeserializationSchema<RowData>> format,
             int[] projection,
             @Nullable String prefix) {
@@ -571,12 +601,10 @@ public class KafkaDynamicSource
     // --------------------------------------------------------------------------------------------
 
     enum ReadableMetadata {
-
         TOPIC(
                 "topic",
                 DataTypes.STRING().notNull(),
-                new MetadataConverter() {
-
+                new DynamicKafkaDeserializationSchema.MetadataConverter() {
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -588,8 +616,7 @@ public class KafkaDynamicSource
         PARTITION(
                 "partition",
                 DataTypes.INT().notNull(),
-                new MetadataConverter() {
-
+                new DynamicKafkaDeserializationSchema.MetadataConverter() {
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -603,8 +630,7 @@ public class KafkaDynamicSource
                 // key and value of the map are nullable to make handling easier in queries
                 DataTypes.MAP(DataTypes.STRING().nullable(), DataTypes.BYTES().nullable())
                         .notNull(),
-                new MetadataConverter() {
-
+                new DynamicKafkaDeserializationSchema.MetadataConverter() {
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -620,8 +646,7 @@ public class KafkaDynamicSource
         LEADER_EPOCH(
                 "leader-epoch",
                 DataTypes.INT().nullable(),
-                new MetadataConverter() {
-
+                new DynamicKafkaDeserializationSchema.MetadataConverter() {
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -633,8 +658,7 @@ public class KafkaDynamicSource
         OFFSET(
                 "offset",
                 DataTypes.BIGINT().notNull(),
-                new MetadataConverter() {
-
+                new DynamicKafkaDeserializationSchema.MetadataConverter() {
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -646,8 +670,7 @@ public class KafkaDynamicSource
         TIMESTAMP(
                 "timestamp",
                 DataTypes.TIMESTAMP_WITH_LOCAL_TIME_ZONE(3).notNull(),
-                new MetadataConverter() {
-
+                new DynamicKafkaDeserializationSchema.MetadataConverter() {
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -659,8 +682,7 @@ public class KafkaDynamicSource
         TIMESTAMP_TYPE(
                 "timestamp-type",
                 DataTypes.STRING().notNull(),
-                new MetadataConverter() {
-
+                new DynamicKafkaDeserializationSchema.MetadataConverter() {
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -673,9 +695,9 @@ public class KafkaDynamicSource
 
         final DataType dataType;
 
-        final MetadataConverter converter;
+        final DynamicKafkaDeserializationSchema.MetadataConverter converter;
 
-        ReadableMetadata(String key, DataType dataType, MetadataConverter converter) {
+        ReadableMetadata(String key, DataType dataType, DynamicKafkaDeserializationSchema.MetadataConverter converter) {
             this.key = key;
             this.dataType = dataType;
             this.converter = converter;

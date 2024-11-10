@@ -32,7 +32,10 @@ import java.util.List;
 import static org.apache.flink.configuration.description.TextElement.text;
 import static org.apache.flink.table.factories.FactoryUtil.FORMAT_SUFFIX;
 
-/** Options for the Kafka connector. */
+/**
+ * Options for the Kafka connector.
+ * copied from org.apache.flink:flink-connector-kafka:1.18.0
+ */
 @PublicEvolving
 public class KafkaConnectorOptions {
 
@@ -117,15 +120,15 @@ public class KafkaConnectorOptions {
                     .asList()
                     .noDefaultValue()
                     .withDescription(
-                            "Topic name(s) to read data from when the table is used as source. It also supports topic list for source by separating topic by semicolon like 'topic-1;topic-2'. Note, only one of 'topic-pattern' and 'topic' can be specified for sources. "
-                                    + "When the table is used as sink, the topic name is the topic to write data. It also supports topic list for sinks. The provided topic-list is treated as a allow list of valid values for the `topic` metadata column. If  a list is provided, for sink table, 'topic' metadata column is writable and must be specified.");
+                            "Topic names from which the table is read. Either 'topic' or 'topic-pattern' must be set for source. "
+                                    + "Option 'topic' is required for sink.");
 
     public static final ConfigOption<String> TOPIC_PATTERN =
             ConfigOptions.key("topic-pattern")
                     .stringType()
                     .noDefaultValue()
                     .withDescription(
-                            "Optional topic pattern from which the table is read for source, or topic pattern that must match the provided `topic` metadata column for sink. Either 'topic' or 'topic-pattern' must be set.");
+                            "Optional topic pattern from which the table is read for source. Either 'topic' or 'topic-pattern' must be set.");
 
     public static final ConfigOption<String> PROPS_BOOTSTRAP_SERVERS =
             ConfigOptions.key("properties.bootstrap.servers")
@@ -274,15 +277,18 @@ public class KafkaConnectorOptions {
     // Enums
     // --------------------------------------------------------------------------------------------
 
-    /** Strategies to derive the data type of a value format by considering a key format. */
+    /**
+     * Strategies to derive the data type of a value format by considering a key format.
+     */
     public enum ValueFieldsStrategy {
         ALL,
         EXCEPT_KEY
     }
 
-    /** Startup mode for the Kafka consumer, see {@link #SCAN_STARTUP_MODE}. */
+    /**
+     * Startup mode for the Kafka consumer, see {@link #SCAN_STARTUP_MODE}.
+     */
     public enum ScanStartupMode implements DescribedEnum {
-
         EARLIEST_OFFSET("earliest-offset", text("Start from the earliest offset possible.")),
         LATEST_OFFSET("latest-offset", text("Start from the latest offset.")),
         GROUP_OFFSETS(
@@ -313,9 +319,10 @@ public class KafkaConnectorOptions {
         }
     }
 
-    /** Bounded mode for the Kafka consumer, see {@link #SCAN_BOUNDED_MODE}. */
+    /**
+     * Bounded mode for the Kafka consumer, see {@link #SCAN_BOUNDED_MODE}.
+     */
     public enum ScanBoundedMode implements DescribedEnum {
-
         UNBOUNDED("unbounded", text("Do not stop consuming")),
         LATEST_OFFSET(
                 "latest-offset",
@@ -357,3 +364,4 @@ public class KafkaConnectorOptions {
     private KafkaConnectorOptions() {
     }
 }
+

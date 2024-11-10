@@ -89,10 +89,11 @@ import static org.apache.flink.util.Preconditions.checkState;
  *
  * <p>Check the Java docs of each individual methods to learn more about the settings to build a
  * KafkaSource.
+ * copied from org.apache.flink:flink-connector-kafka:1.18.0
  */
+// TODO: Add a variable metricSchema to report audit information
 @PublicEvolving
 public class KafkaSourceBuilder<OUT> {
-
     private static final Logger LOG = LoggerFactory.getLogger(KafkaSourceBuilder.class);
     private static final String[] REQUIRED_CONFIGS = {ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG};
     // The subscriber specifies the partitions to subscribe to.
@@ -382,6 +383,8 @@ public class KafkaSourceBuilder<OUT> {
      * created.
      *
      * <ul>
+     *   <li><code>key.deserializer</code> is always set to {@link ByteArrayDeserializer}.
+     *   <li><code>value.deserializer</code> is always set to {@link ByteArrayDeserializer}.
      *   <li><code>auto.offset.reset.strategy</code> is overridden by {@link
      *       OffsetsInitializer#getAutoOffsetResetStrategy()} for the starting offsets, which is by
      *       default {@link OffsetsInitializer#earliest()}.
@@ -406,6 +409,8 @@ public class KafkaSourceBuilder<OUT> {
      * created.
      *
      * <ul>
+     *   <li><code>key.deserializer</code> is always set to {@link ByteArrayDeserializer}.
+     *   <li><code>value.deserializer</code> is always set to {@link ByteArrayDeserializer}.
      *   <li><code>auto.offset.reset.strategy</code> is overridden by {@link
      *       OffsetsInitializer#getAutoOffsetResetStrategy()} for the starting offsets, which is by
      *       default {@link OffsetsInitializer#earliest()}.
@@ -441,7 +446,7 @@ public class KafkaSourceBuilder<OUT> {
                 rackIdSupplier);
     }
 
-    // ------------- private helpers --------------
+    // ------------- private helpers  --------------
 
     private void ensureSubscriberIsNull(String attemptingSubscribeMode) {
         if (subscriber != null) {
@@ -456,11 +461,11 @@ public class KafkaSourceBuilder<OUT> {
         maybeOverride(
                 ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
                 ByteArrayDeserializer.class.getName(),
-                false);
+                true);
         maybeOverride(
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
                 ByteArrayDeserializer.class.getName(),
-                false);
+                true);
         if (!props.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
             LOG.warn(
                     "Offset commit on checkpoint is disabled because {} is not specified",
@@ -533,59 +538,18 @@ public class KafkaSourceBuilder<OUT> {
         if (stoppingOffsetsInitializer instanceof OffsetsInitializerValidator) {
             ((OffsetsInitializerValidator) stoppingOffsetsInitializer).validate(props);
         }
-        if (props.containsKey(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG)) {
-            checkDeserializer(props.getProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG));
-        }
-        if (props.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
-            checkDeserializer(props.getProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
-        }
-    }
-
-    private void checkDeserializer(String deserializer) {
-        try {
-            Class<?> deserClass = Class.forName(deserializer);
-            if (!Deserializer.class.isAssignableFrom(deserClass)) {
-                throw new IllegalArgumentException(
-                        String.format(
-                                "Deserializer class %s is not a subclass of %s",
-                                deserializer, Deserializer.class.getName()));
-            }
-
-            // Get the generic type information
-            Type[] interfaces = deserClass.getGenericInterfaces();
-            for (Type iface : interfaces) {
-                if (iface instanceof ParameterizedType) {
-                    ParameterizedType parameterizedType = (ParameterizedType) iface;
-                    Type rawType = parameterizedType.getRawType();
-
-                    // Check if it's Deserializer<byte[]>
-                    if (rawType == Deserializer.class) {
-                        Type[] typeArguments = parameterizedType.getActualTypeArguments();
-                        if (typeArguments.length != 1 || typeArguments[0] != byte[].class) {
-                            throw new IllegalArgumentException(
-                                    String.format(
-                                            "Deserializer class %s does not deserialize byte[]",
-                                            deserializer));
-                        }
-                    }
-                }
-            }
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException(
-                    String.format("Deserializer class %s not found", deserializer), e);
-        }
     }
 
     private boolean offsetCommitEnabledManually() {
         boolean autoCommit =
                 props.containsKey(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG)
                         && Boolean.parseBoolean(
-                                props.getProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG));
+                        props.getProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG));
         boolean commitOnCheckpoint =
                 props.containsKey(KafkaSourceOptions.COMMIT_OFFSETS_ON_CHECKPOINT.key())
                         && Boolean.parseBoolean(
-                                props.getProperty(
-                                        KafkaSourceOptions.COMMIT_OFFSETS_ON_CHECKPOINT.key()));
+                        props.getProperty(
+                                KafkaSourceOptions.COMMIT_OFFSETS_ON_CHECKPOINT.key()));
         return autoCommit || commitOnCheckpoint;
     }
 }

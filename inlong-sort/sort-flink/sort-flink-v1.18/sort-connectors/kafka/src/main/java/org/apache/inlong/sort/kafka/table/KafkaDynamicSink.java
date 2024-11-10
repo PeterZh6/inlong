@@ -23,11 +23,11 @@ import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.connector.base.DeliveryGuarantee;
-import org.apache.flink.connector.kafka.sink.KafkaPartitioner;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.connector.kafka.sink.KafkaSinkBuilder;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
+import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.Projection;
@@ -43,6 +43,7 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.utils.DataTypeUtils;
+
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.header.Header;
 
@@ -57,10 +58,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static org.apache.inlong.sort.kafka.util.Preconditions.checkNotNull;
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /** A version-agnostic Kafka {@link DynamicTableSink}. */
 @Internal
@@ -111,20 +111,16 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
      * If the {@link #deliveryGuarantee} is {@link DeliveryGuarantee#EXACTLY_ONCE} the value is the
      * prefix for all ids of opened Kafka transactions.
      */
-    @Nullable
-    private final String transactionalIdPrefix;
+    @Nullable private final String transactionalIdPrefix;
 
-    /** The Kafka topics to allow for producing. */
-    protected final List<String> topics;
-
-    /** The Kafka topic pattern of topics allowed to produce to. */
-    protected final Pattern topicPattern;
+    /** The Kafka topic to write to. */
+    protected final String topic;
 
     /** Properties for the Kafka producer. */
     protected final Properties properties;
 
     /** Partitioner to select Kafka partition for each item. */
-    protected final @Nullable KafkaPartitioner<RowData> partitioner;
+    protected final @Nullable FlinkKafkaPartitioner<RowData> partitioner;
 
     /**
      * Flag to determine sink mode. In upsert mode sink transforms the delete/update-before message
@@ -146,10 +142,9 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
             int[] keyProjection,
             int[] valueProjection,
             @Nullable String keyPrefix,
-            @Nullable List<String> topics,
-            @Nullable Pattern topicPattern,
+            String topic,
             Properties properties,
-            @Nullable KafkaPartitioner<RowData> partitioner,
+            @Nullable FlinkKafkaPartitioner<RowData> partitioner,
             DeliveryGuarantee deliveryGuarantee,
             boolean upsertMode,
             SinkBufferFlushMode flushMode,
@@ -170,8 +165,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
         // Mutable attributes
         this.metadataKeys = Collections.emptyList();
         // Kafka-specific attributes
-        this.topics = topics;
-        this.topicPattern = topicPattern;
+        this.topic = checkNotNull(topic, "Topic must not be null.");
         this.properties = checkNotNull(properties, "Properties must not be null.");
         this.partitioner = partitioner;
         this.deliveryGuarantee =
@@ -211,8 +205,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                         .setKafkaProducerConfig(properties)
                         .setRecordSerializer(
                                 new DynamicKafkaRecordSerializationSchema(
-                                        topics,
-                                        topicPattern,
+                                        topic,
                                         partitioner,
                                         keySerialization,
                                         valueSerialization,
@@ -224,7 +217,6 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                         .build();
         if (flushMode.isEnabled() && upsertMode) {
             return new DataStreamSinkProvider() {
-
                 @Override
                 public DataStreamSink<?> consumeDataStream(
                         ProviderContext providerContext, DataStream<RowData> dataStream) {
@@ -238,8 +230,9 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                                     flushMode,
                                     objectReuse
                                             ? createRowDataTypeSerializer(
-                                                    context,
-                                                    dataStream.getExecutionConfig())::copy
+                                            context,
+                                            dataStream.getExecutionConfig())
+                                            ::copy
                                             : rowData -> rowData);
                     final DataStreamSink<RowData> end = dataStream.sinkTo(sink);
                     providerContext.generateUid(UPSERT_KAFKA_TRANSFORMATION).ifPresent(end::uid);
@@ -256,13 +249,8 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
     @Override
     public Map<String, DataType> listWritableMetadata() {
         final Map<String, DataType> metadataMap = new LinkedHashMap<>();
-        for (WritableMetadata m : WritableMetadata.values()) {
-            if (topics != null && topics.size() == 1 && WritableMetadata.TOPIC.key.equals(m.key)) {
-                // When `topic` is a singleton list, TOPIC metadata is not writable
-                continue;
-            }
-            metadataMap.put(m.key, m.dataType);
-        }
+        Stream.of(WritableMetadata.values())
+                .forEachOrdered(m -> metadataMap.put(m.key, m.dataType));
         return metadataMap;
     }
 
@@ -283,8 +271,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                         keyProjection,
                         valueProjection,
                         keyPrefix,
-                        topics,
-                        topicPattern,
+                        topic,
                         properties,
                         partitioner,
                         deliveryGuarantee,
@@ -318,8 +305,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                 && Arrays.equals(keyProjection, that.keyProjection)
                 && Arrays.equals(valueProjection, that.valueProjection)
                 && Objects.equals(keyPrefix, that.keyPrefix)
-                && Objects.equals(topics, that.topics)
-                && Objects.equals(String.valueOf(topicPattern), String.valueOf(that.topicPattern))
+                && Objects.equals(topic, that.topic)
                 && Objects.equals(properties, that.properties)
                 && Objects.equals(partitioner, that.partitioner)
                 && Objects.equals(deliveryGuarantee, that.deliveryGuarantee)
@@ -340,8 +326,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                 keyProjection,
                 valueProjection,
                 keyPrefix,
-                topics,
-                topicPattern,
+                topic,
                 properties,
                 partitioner,
                 deliveryGuarantee,
@@ -381,13 +366,14 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
             List<LogicalType> physicalChildren, int[] keyProjection) {
         return Arrays.stream(keyProjection)
                 .mapToObj(
-                        targetField -> RowData.createFieldGetter(
-                                physicalChildren.get(targetField), targetField))
+                        targetField ->
+                                RowData.createFieldGetter(
+                                        physicalChildren.get(targetField), targetField))
                 .toArray(RowData.FieldGetter[]::new);
     }
 
     private @Nullable SerializationSchema<RowData> createSerialization(
-            Context context,
+            DynamicTableSink.Context context,
             @Nullable EncodingFormat<SerializationSchema<RowData>> format,
             int[] projection,
             @Nullable String prefix) {
@@ -406,29 +392,12 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
     // --------------------------------------------------------------------------------------------
 
     enum WritableMetadata {
-
-        TOPIC(
-                "topic",
-                DataTypes.STRING().notNull(),
-                new MetadataConverter() {
-
-                    private static final long serialVersionUID = 1L;
-
-                    @Override
-                    public Object read(RowData row, int pos) {
-                        if (row.isNullAt(pos)) {
-                            return null;
-                        }
-                        return row.getString(pos).toString();
-                    }
-                }),
         HEADERS(
                 "headers",
                 // key and value of the map are nullable to make handling easier in queries
                 DataTypes.MAP(DataTypes.STRING().nullable(), DataTypes.BYTES().nullable())
                         .nullable(),
                 new MetadataConverter() {
-
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -455,7 +424,6 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
                 "timestamp",
                 DataTypes.TIMESTAMP_WITH_LOCAL_TIME_ZONE(3).nullable(),
                 new MetadataConverter() {
-
                     private static final long serialVersionUID = 1L;
 
                     @Override
@@ -481,7 +449,6 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
     }
 
     interface MetadataConverter extends Serializable {
-
         Object read(RowData consumedRow, int pos);
     }
 

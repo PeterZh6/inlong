@@ -45,12 +45,14 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-/** The source reader for Kafka partitions. */
+/** The source reader for Kafka partitions.
+ * copied from org.apache.flink:flink-connector-kafka:1.18.0
+ */
+// TODO: Add some method to make report audit information exactly once
 @Internal
 public class KafkaSourceReader<T>
-        extends
-            SingleThreadMultiplexSourceReaderBase<ConsumerRecord<byte[], byte[]>, T, KafkaPartitionSplit, KafkaPartitionSplitState> {
-
+        extends SingleThreadMultiplexSourceReaderBase<
+        ConsumerRecord<byte[], byte[]>, T, KafkaPartitionSplit, KafkaPartitionSplitState> {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaSourceReader.class);
     // These maps need to be concurrent because it will be accessed by both the main thread
     // and the split fetcher thread in the callback.
@@ -60,9 +62,11 @@ public class KafkaSourceReader<T>
     private final boolean commitOffsetsOnCheckpoint;
 
     public KafkaSourceReader(
-            FutureCompletingBlockingQueue<RecordsWithSplitIds<ConsumerRecord<byte[], byte[]>>> elementsQueue,
+            FutureCompletingBlockingQueue<RecordsWithSplitIds<ConsumerRecord<byte[], byte[]>>>
+                    elementsQueue,
             KafkaSourceFetcherManager kafkaSourceFetcherManager,
-            RecordEmitter<ConsumerRecord<byte[], byte[]>, T, KafkaPartitionSplitState> recordEmitter,
+            RecordEmitter<ConsumerRecord<byte[], byte[]>, T, KafkaPartitionSplitState>
+                    recordEmitter,
             Configuration config,
             SourceReaderContext context,
             KafkaSourceReaderMetrics kafkaSourceReaderMetrics) {
@@ -159,13 +163,15 @@ public class KafkaSourceReader<T>
                                 // If the finished topic partition has been committed, we remove it
                                 // from the offsets of the finished splits map.
                                 committedPartitions.forEach(
-                                        (tp, offset) -> kafkaSourceReaderMetrics.recordCommittedOffset(
-                                                tp, offset.offset()));
+                                        (tp, offset) ->
+                                                kafkaSourceReaderMetrics.recordCommittedOffset(
+                                                        tp, offset.offset()));
                                 offsetsOfFinishedSplits
                                         .entrySet()
                                         .removeIf(
-                                                entry -> committedPartitions.containsKey(
-                                                        entry.getKey()));
+                                                entry ->
+                                                        committedPartitions.containsKey(
+                                                                entry.getKey()));
                                 removeAllOffsetsToCommitUpToCheckpoint(checkpointId);
                             }
                         });
