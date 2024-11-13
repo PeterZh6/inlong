@@ -167,6 +167,42 @@
                             <type>jar</type>
                             <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
                         </artifactItem>
+                        <artifactItem>
+                            <groupId>org.apache.inlong</groupId>
+                            <artifactId>sort-connector-kafka-v1.18</artifactId>
+                            <version>${project.version}</version>
+                            <destFileName>sort-connector-kafka.jar</destFileName>
+                            <type>jar</type>
+                            <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
+                        </artifactItem>
+                        <dependency>
+                            <groupId>mysql</groupId>
+                            <artifactId>mysql-connector-java</artifactId>
+                            <version>${mysql.jdbc.version}</version>
+                            <destFileName>mysql-driver.jar</destFileName>
+                            <type>jar</type>
+                            <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
+                        </dependency>
+                        <!-- temporary dependency for kafka end2end tests, generated from v1.15 START-->
+                        <!-- REMOVE THIS WHEN THE CORRESPONDING CONNECTORS FOR 1.18 ARE FINISHED-->
+                        <artifactItem>
+                            <groupId>org.apache.inlong</groupId>
+                            <artifactId>sort-connector-mysql-cdc-v1.15</artifactId>
+                            <version>${project.version}</version>
+                            <destFileName>sort-connector-mysql-cdc.jar</destFileName>
+                            <type>jar</type>
+                            <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
+                        </artifactItem>
+                        <artifactItem>
+                            <groupId>org.apache.inlong</groupId>
+                            <artifactId>sort-connector-starrocks-v1.15</artifactId>
+                            <version>${project.version}</version>
+                            <destFileName>sort-connector-starrocks.jar</destFileName>
+                            <type>jar</type>
+                            <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
+                        </artifactItem>
+                        <!-- temporary dependency for kafka end2end tests, generated from v1.15 END-->
+
                     </artifactItems>
                 </configuration>
                 <executions>
