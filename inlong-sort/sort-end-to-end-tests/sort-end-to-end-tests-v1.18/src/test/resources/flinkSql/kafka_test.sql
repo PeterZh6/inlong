@@ -1,5 +1,5 @@
 CREATE TABLE test_input (
-    `id` INT primary key,
+    id INT,
     name STRING,
     description STRING
 ) WITH (
@@ -16,7 +16,7 @@ CREATE TABLE test_input (
 );
 
 CREATE TABLE kafka_load (
-    `id` INT NOT NULL primary key,
+    id INT,
     name STRING,
     description STRING
 ) WITH (
@@ -28,7 +28,7 @@ CREATE TABLE kafka_load (
 );
 
 CREATE TABLE kafka_extract (
-    `id` INT NOT NULL,
+    id INT,
     name STRING,
     description STRING
 ) WITH (
@@ -41,7 +41,7 @@ CREATE TABLE kafka_extract (
 );
 
 CREATE TABLE test_output (
-    `id` INT primary key,
+    id INT,
     name STRING,
     description STRING
 ) WITH (
@@ -57,5 +57,8 @@ CREATE TABLE test_output (
     'sink.buffer-flush.interval-ms' = '1000'
 );
 
-INSERT INTO kafka_load select * from test_input;
-INSERT INTO test_output select * from kafka_extract;
+-- Insert data from MySQL source into Kafka
+INSERT INTO kafka_load SELECT * FROM test_input;
+
+-- Insert data from Kafka into StarRocks sink
+INSERT INTO test_output SELECT * FROM kafka_extract;
