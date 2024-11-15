@@ -3,10 +3,10 @@ CREATE TABLE kafka_source (
 ) WITH (
     'connector' = 'kafka-inlong',
     'topic' = 'test-topic',
-    'bootstrap.servers' = 'localhost:9093',
-    'group.id' = 'flink-group',
-    'format' = 'json',
-    'scan.startup.mode' = 'earliest'
+    'properties.bootstrap.servers' = 'kafka:9092',
+    'properties.group.id' = 'flink-group',
+    'scan.startup.mode' = 'earliest-offset',
+    'format' = 'json'
 );
 
 
@@ -16,7 +16,6 @@ CREATE TABLE elasticsearch_sink (
     'connector' = 'elasticsearch7-inlong',
     'hosts' = 'http://localhost:9200',
     'index' = 'test-index',
-    'document-type' = '_doc',
     'format' = 'json'
 );
 
