@@ -63,6 +63,9 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
     private static final Path kafkaJar = TestUtils.getResource("sort-connector-kafka.jar");
     private static final Path elasticsearchJar = TestUtils.getResource("sort-connector-elasticsearch7.jar");
 
+    private static final String FIRST_KAFKA_MESSAGE = "{\"message\":\"value1\"}";
+    private static final String SECOND_KAFKA_MESSAGE = "{\"message\":\"value2\"}";
+
     private static final String sqlFile;
 
     static {
@@ -92,10 +95,14 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
                     .withLogConsumer(new Slf4jLogConsumer(ELASTICSEARCH_LOGGER));
 
     @Before
-    public void setup() {
+    public void setup() throws IOException {
         waitUntilJobRunning(Duration.ofSeconds(30));
         initializeKafkaTopic("test-topic");
         initializeElasticsearchIndex();
+        String sqlContent = new String(Files.readAllBytes(Paths.get(sqlFile)), StandardCharsets.UTF_8);
+        String elasticsearchHost = "http://localhost:" + ELASTICSEARCH.getMappedPort(9200);
+        sqlContent = sqlContent.replace("http://localhost:9200", elasticsearchHost);
+        Files.write(Paths.get(sqlFile), sqlContent.getBytes(StandardCharsets.UTF_8));
     }
 
     private void initializeKafkaTopic(String topic) {
@@ -163,8 +170,10 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
         // Produce messages to Kafka
         try (org.apache.kafka.clients.producer.KafkaProducer<String, String> producer =
                 new org.apache.kafka.clients.producer.KafkaProducer<>(getKafkaProducerConfig())) {
-            producer.send(new org.apache.kafka.clients.producer.ProducerRecord<>("test-topic", "key1", "value1"));
-            producer.send(new org.apache.kafka.clients.producer.ProducerRecord<>("test-topic", "key2", "value2"));
+            producer.send(
+                    new org.apache.kafka.clients.producer.ProducerRecord<>("test-topic", "key1", FIRST_KAFKA_MESSAGE));
+            producer.send(
+                    new org.apache.kafka.clients.producer.ProducerRecord<>("test-topic", "key2", SECOND_KAFKA_MESSAGE));
         }
 
         // Query Elasticsearch to verify data is ingested
@@ -179,7 +188,10 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
             SearchResponse<Object> searchResponse = client.search(searchRequest, Object.class);
 
             List<Hit<Object>> hits = searchResponse.hits().hits();
-            LOG.info("Elasticsearch response: {}", hits);
+            LOG.info(">>>>>>>>>>>>>>>>>>>>> Elasticsearch response: {}", hits);
+            while (true) {
+
+            }
         } catch (IOException e) {
             LOG.error("Failed to query Elasticsearch", e);
         }
