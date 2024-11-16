@@ -10,13 +10,15 @@ CREATE TABLE kafka_source (
 );
 
 
-CREATE TABLE file_sink (
+CREATE TABLE elasticsearch_sink (
     `message` STRING
 ) WITH (
-    'connector' = 'filesystem',
-    'path' = 'file:///tmp/output_file',
+    'connector' = 'elasticsearch7-inlong',
+    'hosts' = 'http://elasticsearch:9200',
+    'index' = 'test-index',
     'format' = 'json'
 );
 
-INSERT INTO file_sink
+
+INSERT INTO elasticsearch_sink
 SELECT * FROM kafka_source;

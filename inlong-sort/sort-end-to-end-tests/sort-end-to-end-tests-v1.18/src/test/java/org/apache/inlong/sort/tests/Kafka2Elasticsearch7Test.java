@@ -49,6 +49,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,9 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
 
     private static final String FIRST_KAFKA_MESSAGE = "{\"message\":\"value1\"}";
     private static final String SECOND_KAFKA_MESSAGE = "{\"message\":\"value2\"}";
+
+    private static final String FIRST_ES_MESSAGE = "{\"message\":\"value3\"}";
+    private static final String SECOND_ES_MESSAGE = "{\"message\":\"value4\"}";
 
     private static final String sqlFile;
 
@@ -99,10 +103,6 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
         waitUntilJobRunning(Duration.ofSeconds(30));
         initializeKafkaTopic("test-topic");
         initializeElasticsearchIndex();
-        String sqlContent = new String(Files.readAllBytes(Paths.get(sqlFile)), StandardCharsets.UTF_8);
-        String elasticsearchHost = "http://localhost:" + ELASTICSEARCH.getMappedPort(9200);
-        sqlContent = sqlContent.replace("http://localhost:9200", elasticsearchHost);
-        Files.write(Paths.get(sqlFile), sqlContent.getBytes(StandardCharsets.UTF_8));
     }
 
     private void initializeKafkaTopic(String topic) {
@@ -139,6 +139,7 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
     }
 
     private void initializeElasticsearchIndex() {
+        log.info(">>>>>>>>>>>>>>>>>>>>> initializeElasticsearchIndex");
         try (RestClient restClient =
                 RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
             RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
@@ -181,6 +182,13 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
                 RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
             RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
             ElasticsearchClient client = new ElasticsearchClient(transport);
+
+            Map<String, String> key3Data = Collections.singletonMap("message", FIRST_ES_MESSAGE);
+            Map<String, String> key4Data = Collections.singletonMap("message", SECOND_ES_MESSAGE);
+
+            client.index(i -> i.index("test-index").id("key3").document(key3Data));
+            client.index(i -> i.index("test-index").id("key4").document(key4Data));
+            LOG.info("Inserted key3 and key4 into Elasticsearch.");
 
             // Search Elasticsearch for the ingested data
             SearchRequest searchRequest =
