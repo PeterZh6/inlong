@@ -22,9 +22,7 @@ import org.apache.inlong.sort.tests.utils.PlaceholderResolver;
 import org.apache.inlong.sort.tests.utils.TestUtils;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch.core.SearchRequest;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import org.apache.http.HttpHost;
@@ -49,11 +47,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
 
@@ -64,11 +64,13 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
     private static final Path kafkaJar = TestUtils.getResource("sort-connector-kafka.jar");
     private static final Path elasticsearchJar = TestUtils.getResource("sort-connector-elasticsearch7.jar");
 
-    private static final String FIRST_KAFKA_MESSAGE = "{\"message\":\"value1\"}";
-    private static final String SECOND_KAFKA_MESSAGE = "{\"message\":\"value2\"}";
+    private static final int ELASTICSEARCH_DEFAULT_PORT = 9200;
 
-    private static final String FIRST_ES_MESSAGE = "{\"message\":\"value3\"}";
-    private static final String SECOND_ES_MESSAGE = "{\"message\":\"value4\"}";
+    private static final String FIRST_KAFKA_MESSAGE = "{\"message\":\"Hello From Kafka\"}";
+    private static final String SECOND_KAFKA_MESSAGE = "{\"message\":\"Goodbye From ElasticSearch\"}";
+
+    private static final String FIRST_EXPECTED_MESSAGE = "Hello From Kafka";
+    private static final String SECOND_EXPECTED_MESSAGE = "Goodbye From ElasticSearch";
 
     private static final String sqlFile;
 
@@ -93,7 +95,6 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
     @ClassRule
     public static final ElasticsearchContainer ELASTICSEARCH =
             new ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:7.17.24"))
-                    .withExposedPorts(9200)
                     .withNetwork(NETWORK)
                     .withNetworkAliases("elasticsearch")
                     .withLogConsumer(new Slf4jLogConsumer(ELASTICSEARCH_LOGGER));
@@ -139,14 +140,19 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
     }
 
     private void initializeElasticsearchIndex() {
-        log.info(">>>>>>>>>>>>>>>>>>>>> initializeElasticsearchIndex");
         try (RestClient restClient =
-                RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
+                RestClient.builder(
+                        new HttpHost("localhost", ELASTICSEARCH.getMappedPort(ELASTICSEARCH_DEFAULT_PORT), "http"))
+                        .build()) {
             RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
-            ElasticsearchClient client = new ElasticsearchClient(transport);
+            try (ElasticsearchClient client = new ElasticsearchClient(transport)) {
+                // Create Elasticsearch index
+                client.indices().create(c -> c.index("test-index"));
+            } catch (ElasticsearchException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 
-            // Create Elasticsearch index
-            client.indices().create(c -> c.index("test-index"));
             LOG.info("Created Elasticsearch index: test-index");
         } catch (IOException e) {
             throw new RuntimeException("Failed to create Elasticsearch index", e);
@@ -178,27 +184,69 @@ public class Kafka2Elasticsearch7Test extends FlinkContainerTestEnvJRE8 {
         }
 
         // Query Elasticsearch to verify data is ingested
-        try (RestClient restClient =
-                RestClient.builder(new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http")).build()) {
+        try (RestClient restClient = RestClient.builder(
+                new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http"))
+                .build()) {
+
             RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
-            ElasticsearchClient client = new ElasticsearchClient(transport);
+            try (ElasticsearchClient client = new ElasticsearchClient(transport)) {
 
-            Map<String, String> key3Data = Collections.singletonMap("message", FIRST_ES_MESSAGE);
-            Map<String, String> key4Data = Collections.singletonMap("message", SECOND_ES_MESSAGE);
+                List<String> messages = new ArrayList<>();
+                int maxRetries = 10; // Maximum number of retries (10 seconds)
+                int retryCount = 0;
 
-            client.index(i -> i.index("test-index").id("key3").document(key3Data));
-            client.index(i -> i.index("test-index").id("key4").document(key4Data));
-            LOG.info("Inserted key3 and key4 into Elasticsearch.");
+                while (retryCount < maxRetries) {
+                    co.elastic.clients.elasticsearch.core.SearchRequest searchRequest =
+                            new co.elastic.clients.elasticsearch.core.SearchRequest.Builder()
+                                    .index("test-index")
+                                    .query(q -> q.matchAll(m -> m))
+                                    .build();
 
-            // Search Elasticsearch for the ingested data
-            SearchRequest searchRequest =
-                    new SearchRequest.Builder().index("test-index").query(q -> q.matchAll(m -> m)).build();
-            SearchResponse<Object> searchResponse = client.search(searchRequest, Object.class);
+                    co.elastic.clients.elasticsearch.core.SearchResponse<Map> response =
+                            client.search(searchRequest, Map.class);
 
-            List<Hit<Object>> hits = searchResponse.hits().hits();
-            LOG.info(">>>>>>>>>>>>>>>>>>>>> Elasticsearch response: {}", hits);
-            while (true) {
+                    // Extract `message` fields using Elasticsearch Java API
+                    messages = response.hits().hits().stream()
+                            .map(hit -> {
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> source = hit.source();
+                                if (source != null && source.containsKey("message")) {
+                                    return (String) source.get("message");
+                                }
+                                return null;
+                            })
+                            .filter(Objects::nonNull) // Remove null values
+                            .collect(Collectors.toList());
 
+                    if (!messages.isEmpty()) {
+                        // Stop polling if data is found
+                        break;
+                    }
+
+                    // Wait for 1 second before retrying
+                    Thread.sleep(1000);
+                    retryCount++;
+                }
+
+                if (messages.isEmpty()) {
+                    throw new AssertionError("Elasticsearch validation failed: No messages found after polling.");
+                }
+
+                LOG.info("Extracted messages from Elasticsearch: {}", messages);
+
+                // Create expected messages list
+                List<String> expectedMessages = new ArrayList<>();
+                expectedMessages.add(FIRST_EXPECTED_MESSAGE);
+                expectedMessages.add(SECOND_EXPECTED_MESSAGE);
+
+                // Validate messages against the expected messages
+                if (new HashSet<>(messages).equals(new HashSet<>(expectedMessages))) {
+                    LOG.info("Elasticsearch contains all expected messages: {}", expectedMessages);
+                } else {
+                    throw new AssertionError(
+                            String.format("Elasticsearch validation failed. Expected: %s, Found: %s", expectedMessages,
+                                    messages));
+                }
             }
         } catch (IOException e) {
             LOG.error("Failed to query Elasticsearch", e);
