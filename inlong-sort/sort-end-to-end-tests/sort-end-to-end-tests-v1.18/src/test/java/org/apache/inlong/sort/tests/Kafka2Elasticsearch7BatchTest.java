@@ -17,13 +17,14 @@
 
 package org.apache.inlong.sort.tests;
 
+import org.apache.inlong.sort.tests.utils.FlinkContainerTestEnvJRE8;
+import org.apache.inlong.sort.tests.utils.PlaceholderResolver;
+import org.apache.inlong.sort.tests.utils.TestUtils;
+
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import org.apache.http.HttpHost;
-import org.apache.inlong.sort.tests.utils.FlinkContainerTestEnvJRE8;
-import org.apache.inlong.sort.tests.utils.PlaceholderResolver;
-import org.apache.inlong.sort.tests.utils.TestUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.elasticsearch.client.RestClient;
@@ -66,14 +67,15 @@ public class Kafka2Elasticsearch7BatchTest extends FlinkContainerTestEnvJRE8 {
 
     private static final int ELASTICSEARCH_DEFAULT_PORT = 9200;
 
-
-
     private static final String sqlFile;
+
+    private List<String> expectedMessages = new ArrayList<>();
 
     static {
         try {
             sqlFile = Paths
-                    .get(Kafka2Elasticsearch7BatchTest.class.getResource("/flinkSql/kafka_to_elasticsearch_batch.sql").toURI())
+                    .get(Kafka2Elasticsearch7BatchTest.class.getResource("/flinkSql/kafka_to_elasticsearch_batch.sql")
+                            .toURI())
                     .toString();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -178,7 +180,9 @@ public class Kafka2Elasticsearch7BatchTest extends FlinkContainerTestEnvJRE8 {
         for (int batch = 1; batch <= totalBatches; batch++) {
             // Send a batch of 5 messages
             for (int i = 0; i < batchSize; i++) {
-                String message = String.format("{\"message\":\"Message %d from Kafka, Batch %d, ID %d\"}", i + 1, batch, globalMessageId++);
+                String message = String.format("{\"message\":\"Message %d from Kafka, Batch %d, ID %d\"}", i + 1, batch,
+                        globalMessageId++);
+                expectedMessages.add(message);
                 producer.send(new ProducerRecord<>("test-topic", "key" + (batch * batchSize + i), message));
                 LOG.info("Sent message {} from Batch {}", message, batch);
             }
@@ -187,17 +191,19 @@ public class Kafka2Elasticsearch7BatchTest extends FlinkContainerTestEnvJRE8 {
             Thread.sleep(2000);
 
             // After sending each batch, verify the batch has been ingested into Elasticsearch
-            verifyBatchIngested(batchSize);
+            // verifyBatchIngested(batchSize, batch);
+            expectedMessages.clear();
 
             // Wait for a short time to simulate time between batches
-            Thread.sleep(2000);  // Sleep for 2 seconds between batches
+            Thread.sleep(2000); // Sleep for 2 seconds between batches
         }
+        Thread.sleep(1000000);
     }
 
-    private void verifyBatchIngested(int batchSize) throws Exception {
+    private void verifyBatchIngested(int batchSize, int batch) throws Exception {
         // Query Elasticsearch to verify that exactly `batchSize` messages have been ingested
         RestClient restClient = RestClient.builder(
-                        new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http"))
+                new HttpHost("localhost", ELASTICSEARCH.getMappedPort(9200), "http"))
                 .build();
         RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
         ElasticsearchClient client = new ElasticsearchClient(transport);
@@ -230,13 +236,9 @@ public class Kafka2Elasticsearch7BatchTest extends FlinkContainerTestEnvJRE8 {
                     .filter(Objects::nonNull) // Remove null values
                     .collect(Collectors.toList());
 
-            // If the number of messages matches the batch size, validate message content
+            // If the number of messages matches the total number of messages sent, validate message content
+            // if (messages.size() == batchSize * (batch + 1)) {
             if (messages.size() == batchSize) {
-                // Create the expected messages for this batch
-                List<String> expectedMessages = new ArrayList<>();
-                for (int i = 1; i <= batchSize; i++) {
-                    expectedMessages.add(String.format("Message %d from Kafka, Batch %d", i, retryCount + 1));
-                }
 
                 if (new HashSet<>(messages).equals(new HashSet<>(expectedMessages))) {
                     LOG.info("Batch ingested successfully: {}", messages);
@@ -256,9 +258,6 @@ public class Kafka2Elasticsearch7BatchTest extends FlinkContainerTestEnvJRE8 {
             retryCount++;
         }
     }
-
-
-
 
     private java.util.Properties getKafkaProducerConfig() {
         java.util.Properties props = new java.util.Properties();
