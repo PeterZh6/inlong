@@ -141,6 +141,32 @@ public abstract class FlinkContainerTestEnv extends TestLogger {
     }
 
     /**
+     * Submits a SQL batch job to the running cluster.
+     *
+     * <p><b>NOTE:</b> You should not use {@code '\t'}.
+     */
+    public void submitSQLBatchJob(String sqlFile, Path... jars)
+            throws IOException, InterruptedException {
+        final List<String> commands = new ArrayList<>();
+        String containerSqlFile = copyToContainerTmpPath(jobManager, sqlFile);
+        commands.add(FLINK_BIN + "/flink run -d");
+        commands.add("-c org.apache.inlong.sort.Entrance");
+        commands.add(copyToContainerTmpPath(jobManager, constructDistJar(jars)));
+        commands.add("--sql.script.file");
+        commands.add(containerSqlFile);
+        // set batch mode
+        commands.add("-Druntime.execution.mode=BATCH");
+
+        ExecResult execResult =
+                jobManager.execInContainer("bash", "-c", String.join(" ", commands));
+        LOG.info(execResult.getStdout());
+        if (execResult.getExitCode() != 0) {
+            LOG.error(execResult.getStderr());
+            throw new AssertionError("Failed when submitting the SQL job.");
+        }
+    }
+
+    /**
      * Get {@link RestClusterClient} connected to this FlinkContainer.
      *
      * <p>This method lazily initializes the REST client on-demand.
